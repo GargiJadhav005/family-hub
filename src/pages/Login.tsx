@@ -8,6 +8,18 @@ import { GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
+const roleTabs: { role: UserRole; label: string }[] = [
+  { role: 'teacher', label: 'शिक्षक' },
+  { role: 'parent', label: 'पालक' },
+  { role: 'student', label: 'विद्यार्थी' },
+];
+
+const demoMap: Record<UserRole, { email: string; password: string }> = {
+  teacher: { email: 'teacher@school.edu', password: 'teacher123' },
+  parent: { email: 'parent@school.edu', password: 'parent123' },
+  student: { email: 'student@school.edu', password: 'student123' },
+};
+
 export default function Login() {
   const [searchParams] = useSearchParams();
   const defaultRole = (searchParams.get("role") as UserRole) || "teacher";
@@ -25,21 +37,22 @@ export default function Login() {
     setLoading(true);
 
     const success = await login(email, password, role);
-
     setLoading(false);
 
     if (success) {
       toast.success("यशस्वीरित्या लॉगिन झाले!");
-      navigate(role === "teacher" ? "/teacher" : "/parent");
+      const redirectMap: Record<UserRole, string> = {
+        teacher: '/teacher',
+        parent: '/parent',
+        student: '/student',
+      };
+      navigate(redirectMap[role]);
     } else {
       toast.error("चुकीचा ईमेल किंवा पासवर्ड");
     }
   };
 
-  const demoCredentials =
-    role === "teacher"
-      ? { email: "teacher@school.edu", password: "teacher123" }
-      : { email: "parent@school.edu", password: "parent123" };
+  const demoCredentials = demoMap[role];
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/40 px-4">
@@ -49,7 +62,6 @@ export default function Login() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        {/* Header */}
         <div className="text-center mb-10">
           <Link to="/" className="inline-flex flex-col items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -66,36 +78,25 @@ export default function Login() {
           </Link>
         </div>
 
-        {/* Card */}
         <div className="bg-card border border-border/60 rounded-2xl shadow-sm p-8 backdrop-blur">
-          
           {/* Role Toggle */}
           <div className="flex mb-6 rounded-xl bg-muted p-1">
-            <button
-              type="button"
-              onClick={() => setRole("teacher")}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
-                role === "teacher"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground"
-              }`}
-            >
-              शिक्षक
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole("parent")}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
-                role === "parent"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground"
-              }`}
-            >
-              पालक
-            </button>
+            {roleTabs.map((tab) => (
+              <button
+                key={tab.role}
+                type="button"
+                onClick={() => setRole(tab.role)}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
+                  role === tab.role
+                    ? "bg-background shadow-sm"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label>ईमेल</Label>
@@ -121,23 +122,17 @@ export default function Login() {
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full h-11 rounded-xl"
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading}>
               {loading ? "लॉगिन होत आहे..." : "लॉगिन करा"}
             </Button>
           </form>
 
-          {/* Demo Section */}
           <div className="mt-8 pt-6 border-t border-border/50 text-xs text-muted-foreground">
             <p className="mb-2 font-medium">
-              डेमो लॉगिन ({role === "teacher" ? "शिक्षक" : "पालक"})
+              डेमो लॉगिन ({roleTabs.find(t => t.role === role)?.label})
             </p>
             <p>Email: <span className="font-mono">{demoCredentials.email}</span></p>
             <p>Password: <span className="font-mono">{demoCredentials.password}</span></p>
-
             <Button
               variant="ghost"
               size="sm"
@@ -152,7 +147,6 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Footer */}
         <p className="text-center mt-6 text-sm text-muted-foreground">
           <Link to="/" className="hover:text-primary transition">
             ← मुख्यपृष्ठावर परत जा
