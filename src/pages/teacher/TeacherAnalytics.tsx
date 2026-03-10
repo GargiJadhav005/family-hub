@@ -1,22 +1,13 @@
+import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, Radar, PolarRadiusAxis } from 'recharts';
 import { TrendingUp, AlertTriangle, Star, BookOpen } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
-const subjectPerformance = [
-  { subject: 'मराठी', avg: 88 },
-  { subject: 'गणित', avg: 72 },
-  { subject: 'इंग्रजी', avg: 65 },
-  { subject: 'विज्ञान', avg: 82 },
-  { subject: 'परिसर अभ्यास', avg: 90 },
-];
-
-const radarData = [
-  { area: 'गणित', value: 72 },
-  { area: 'भाषा', value: 85 },
-  { area: 'विज्ञान', value: 82 },
-  { area: 'सर्जनशीलता', value: 90 },
-  { area: 'शारीरिक', value: 88 },
-  { area: 'सामाजिक', value: 78 },
-];
+interface ScoreRecord {
+  id: string;
+  subject: string;
+  scorePercent: number;
+}
 
 const weakAreas = [
   { subject: 'गणित', topic: 'अपूर्णांकांवरील भाग', students: 12, severity: 'high' },
@@ -30,14 +21,100 @@ const strongAreas = [
   { subject: 'विज्ञान', topic: 'प्रयोग कौशल्य', percentage: '९०%' },
 ];
 
-const revisionTopics = [
-  { subject: 'गणित', topic: 'गुणाकार सारणी ७-१२', reason: 'गेल्या चाचणीत ६०% खाली' },
-  { subject: 'इंग्रजी', topic: 'Prepositions', reason: 'सातत्याने चुका होत आहेत' },
-  { subject: 'मराठी', topic: 'लिंग व वचन', reason: 'मूलभूत संकल्पना मजबूत करणे आवश्यक' },
-  { subject: 'विज्ञान', topic: 'मापन आणि एकके', reason: 'विद्यार्थ्यांना गोंधळ होत आहे' },
-];
-
 export default function TeacherAnalytics() {
+  const { user } = useAuth();
+  const [scores, setScores] = useState<ScoreRecord[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token || !user) return;
+
+    const className = user.meta?.class;
+    const query = className ? `?className=${encodeURIComponent(className)}` : '';
+
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/scores${query}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.scores)) {
+          const mapped: ScoreRecord[] = data.scores.map((s: any) => ({
+            id: s.id,
+            subject: s.subject,
+            scorePercent: s.scorePercent,
+          }));
+          setScores(mapped);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    load();
+  }, [user]);
+
+  const subjectPerformance = useMemo(
+    () => {
+      if (!scores.length) return [];
+      const bySubject: Record<string, { subject: string; total: number; count: number }> = {};
+      for (const s of scores) {
+        if (!bySubject[s.subject]) {
+          bySubject[s.subject] = { subject: s.subject, total: 0, count: 0 };
+        }
+        bySubject[s.subject].total += s.scorePercent;
+        bySubject[s.subject].count += 1;
+      }
+      return Object.values(bySubject).map((v) => ({
+        subject: v.subject,
+        avg: Math.round((v.total / v.count) * 10) / 10,
+      }));
+    },
+    [scores]
+  );
+
+  const radarData = useMemo(
+    () => [
+      { area: 'गणित', value: subjectPerformance.find((s) => s.subject.includes('गणित'))?.avg ?? 0 },
+      { area: 'भाषा', value: subjectPerformance.find((s) => s.subject.includes('मराठी') || s.subject.includes('इंग्रजी'))?.avg ?? 0 },
+      { area: 'विज्ञान', value: subjectPerformance.find((s) => s.subject.includes('विज्ञान'))?.avg ?? 0 },
+      { area: 'सर्जनशीलता', value: 90 },
+      { area: 'शारीरिक', value: 88 },
+      { area: 'सामाजिक', value: 78 },
+    ],
+    [subjectPerformance]
+  );
+
+  const weakAreas = useMemo(
+    () => subjectPerformance
+      .filter((s) => s.avg < 75)
+      .map((s) => ({
+        subject: s.subject,
+        topic: 'पुनरावृत्ती आवश्यक',
+        students: 0,
+        severity: 'high' as const,
+      })),
+    [subjectPerformance]
+  );
+
+  const strongAreas = useMemo(
+    () => subjectPerformance
+      .filter((s) => s.avg >= 85)
+      .map((s) => ({
+        subject: s.subject,
+        topic: 'उत्कृष्ट कामगिरी',
+        percentage: `${Math.round(s.avg)}%`,
+      })),
+    [subjectPerformance]
+  );
+
+  const revisionTopics = weakAreas.map((w) => ({
+    subject: w.subject,
+    topic: 'मूलभूत सराव',
+    reason: 'विषयातील गुण ७५% खाली आहेत',
+  }));
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
