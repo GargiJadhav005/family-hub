@@ -1,125 +1,162 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth, UserRole } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { GraduationCap, User, Users } from 'lucide-react';
-import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { GraduationCap } from "lucide-react";
+import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 export default function Login() {
   const [searchParams] = useSearchParams();
-  const defaultRole = (searchParams.get('role') as UserRole) || 'teacher';
+  const defaultRole = (searchParams.get("role") as UserRole) || "teacher";
+
   const [role, setRole] = useState<UserRole>(defaultRole);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     const success = await login(email, password, role);
+
     setLoading(false);
+
     if (success) {
-      toast.success('यशस्वीरित्या लॉगिन झाले!');
-      navigate(role === 'teacher' ? '/teacher' : '/parent');
+      toast.success("यशस्वीरित्या लॉगिन झाले!");
+      navigate(role === "teacher" ? "/teacher" : "/parent");
     } else {
-      toast.error('चुकीचा ईमेल किंवा पासवर्ड');
+      toast.error("चुकीचा ईमेल किंवा पासवर्ड");
     }
   };
 
-  const demoCredentials = role === 'teacher'
-    ? { email: 'teacher@school.edu', password: 'teacher123' }
-    : { email: 'parent@school.edu', password: 'parent123' };
+  const demoCredentials =
+    role === "teacher"
+      ? { email: "teacher@school.edu", password: "teacher123" }
+      : { email: "parent@school.edu", password: "parent123" };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--hero-gradient)' }}>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/40 px-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-primary-foreground" />
+        {/* Header */}
+        <div className="text-center mb-10">
+          <Link to="/" className="inline-flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <GraduationCap className="w-6 h-6 text-primary" />
             </div>
-            <span className="font-bold text-xl">वैनतेय प्राथमिक विद्या मंदिर</span>
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">
+                वैनतेय प्राथमिक विद्या मंदिर
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                शालेय पोर्टलमध्ये लॉगिन करा
+              </p>
+            </div>
           </Link>
-          <p className="text-muted-foreground text-sm">शालेय पोर्टलमध्ये लॉगिन करा</p>
         </div>
 
-        <div className="portal-card p-6 md:p-8">
-          {/* Role toggle */}
-          <div className="flex rounded-lg bg-secondary p-1 mb-6">
+        {/* Card */}
+        <div className="bg-card border border-border/60 rounded-2xl shadow-sm p-8 backdrop-blur">
+          
+          {/* Role Toggle */}
+          <div className="flex mb-6 rounded-xl bg-muted p-1">
             <button
-              onClick={() => setRole('teacher')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
-                role === 'teacher' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              type="button"
+              onClick={() => setRole("teacher")}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
+                role === "teacher"
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground"
               }`}
             >
-              <User className="w-4 h-4" /> शिक्षक
+              शिक्षक
             </button>
             <button
-              onClick={() => setRole('parent')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
-                role === 'parent' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              type="button"
+              onClick={() => setRole("parent")}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
+                role === "parent"
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground"
               }`}
             >
-              <Users className="w-4 h-4" /> पालक
+              पालक
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
               <Label>ईमेल</Label>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="तुमचा ईमेल टाका"
+                placeholder="your@email.com"
                 required
+                className="h-11"
               />
             </div>
-            <div>
+
+            <div className="space-y-2">
               <Label>पासवर्ड</Label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="पासवर्ड टाका"
+                placeholder="••••••••"
                 required
+                className="h-11"
               />
             </div>
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? 'लॉगिन होत आहे...' : 'लॉगिन करा'}
+
+            <Button
+              type="submit"
+              className="w-full h-11 rounded-xl"
+              disabled={loading}
+            >
+              {loading ? "लॉगिन होत आहे..." : "लॉगिन करा"}
             </Button>
           </form>
 
-          <div className="mt-6 p-4 rounded-lg bg-accent/50 border border-border">
-            <p className="text-xs font-medium text-muted-foreground mb-2">डेमो क्रेडेन्शियल्स ({role === 'teacher' ? 'शिक्षक' : 'पालक'}):</p>
-            <p className="text-xs text-muted-foreground">ईमेल: <span className="font-mono text-foreground">{demoCredentials.email}</span></p>
-            <p className="text-xs text-muted-foreground">पासवर्ड: <span className="font-mono text-foreground">{demoCredentials.password}</span></p>
+          {/* Demo Section */}
+          <div className="mt-8 pt-6 border-t border-border/50 text-xs text-muted-foreground">
+            <p className="mb-2 font-medium">
+              डेमो लॉगिन ({role === "teacher" ? "शिक्षक" : "पालक"})
+            </p>
+            <p>Email: <span className="font-mono">{demoCredentials.email}</span></p>
+            <p>Password: <span className="font-mono">{demoCredentials.password}</span></p>
+
             <Button
               variant="ghost"
               size="sm"
-              className="mt-2 text-xs"
+              className="mt-3 px-0 text-xs"
               onClick={() => {
                 setEmail(demoCredentials.email);
                 setPassword(demoCredentials.password);
               }}
             >
-              डेमो क्रेडेन्शियल्स भरा
+              डेमो क्रेडेन्शियल्स भरा →
             </Button>
           </div>
         </div>
 
-        <p className="text-center mt-4 text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-primary">← मुख्यपृष्ठावर परत जा</Link>
+        {/* Footer */}
+        <p className="text-center mt-6 text-sm text-muted-foreground">
+          <Link to="/" className="hover:text-primary transition">
+            ← मुख्यपृष्ठावर परत जा
+          </Link>
         </p>
       </motion.div>
     </div>

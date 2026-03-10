@@ -8,9 +8,9 @@ import { ArrowRight, Trophy, Palette, FlaskConical, Users, BookOpen, GraduationC
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import heroImage from '@/assets/hero-school.jpg';
-import campus1 from '@/assets/campus-1.jpg';
-import campus2 from '@/assets/campus-2.jpg';
-import campus3 from '@/assets/campus-3.jpg';
+import campus1 from '@/assets/campus-1.jpeg';
+import campus2 from '@/assets/campus-2.jpeg';
+import campus3 from '@/assets/campus-3.jpeg';
 
 const stats = [
   { value: '१५:१', label: 'विद्यार्थी-शिक्षक प्रमाण' },
@@ -54,47 +54,71 @@ export default function Index() {
     <div className="min-h-screen">
       <PublicNavbar />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden" style={{ background: 'var(--hero-gradient)' }}>
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
-            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}>
-              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                <BookOpen className="w-4 h-4" /> इयत्ता १ ली ते ४ थी • प्रवेश सुरू
-              </p>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight mb-4">
-                जिथे <span className="text-primary">जिज्ञासा</span> आणि शोध याचा संगम होतो
-              </h1>
-              <p className="text-muted-foreground mb-8 max-w-lg text-base md:text-lg">
-                आमच्या शाळेत मुलांच्या सर्वांगीण विकासासाठी पोषक वातावरण आणि उच्च दर्जाचे प्राथमिक शिक्षण दिले जाते.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Link to="/admissions">
-                  <Button size="lg">प्रवेशासाठी अर्ज करा</Button>
-                </Link>
-                <Link to="/campus">
-                  <Button variant="outline" size="lg">
-                    अभ्यासक्रम पहा <ArrowRight className="ml-2 w-4 h-4" />
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
+{/* Hero Section */}
+<section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative"
-            >
-              <img
-                src={heroImage}
-                alt="शाळेतील विद्यार्थी"
-                className="rounded-2xl shadow-xl w-full object-cover aspect-[4/3]"
-              />
-            </motion.div>
-          </div>
-        </div>
-      </section>
+  {/* Background Image */}
+  <div className="absolute inset-0">
+    <img
+      src={heroImage}
+      alt="शाळेतील विद्यार्थी"
+      className="w-full h-full object-cover"
+    />
+    {/* Dark Overlay */}
+    <div className="absolute inset-0 bg-black/60" />
+  </div>
+
+  {/* Content */}
+  <div className="relative z-10 container mx-auto px-4 text-center text-white">
+
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+    >
+
+      {/* Top Line */}
+      <p className="text-sm md:text-base mb-3 tracking-wide text-gray-200">
+        इयत्ता १ ली ते ४ थी  
+      </p>
+
+      <p className="text-sm md:text-base mb-3 text-gray-300">
+        न्या. रानडे विद्याप्रसारक मंडळ संचालित, निफाड
+      </p>
+
+      {/* Main School Name (BIGGEST) */}
+      <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-4">
+        वैनतेय प्राथमिक विद्या मंदिर
+      </h1>
+
+      {/* Location */}
+      <p className="text-lg md:text-xl text-gray-200 mb-6">
+        निफाड, ता. निफाड, जि. नाशिक.
+      </p>
+
+      {/* Description */}
+      <p className="max-w-3xl mx-auto text-base md:text-lg text-gray-300 mb-10">
+        आमच्या शाळेत मुलांच्या सर्वांगीण विकासासाठी पोषक वातावरण आणि उच्च दर्जाचे प्राथमिक शिक्षण दिले जाते.
+      </p>
+
+      {/* Buttons */}
+      <div className="flex flex-wrap justify-center gap-4">
+        <Link to="/admissions">
+          <Button size="lg" className="bg-primary text-white hover:bg-primary/90 px-8">
+            प्रवेशासाठी अर्ज करा
+          </Button>
+        </Link>
+
+        <Link to="/campus">
+          <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-black px-8">
+            अधिक माहिती
+          </Button>
+        </Link>
+      </div>
+
+    </motion.div>
+  </div>
+</section>
 
       {/* Stats */}
       <section className="py-12 border-b border-border">
