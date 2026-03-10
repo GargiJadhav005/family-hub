@@ -24,7 +24,6 @@ export function PublicNavbar() {
           <span className="font-bold text-lg text-foreground">वैनतेय प्राथमिक विद्या मंदिर</span>
         </Link>
 
-        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((l) => (
             <Link
@@ -39,22 +38,23 @@ export function PublicNavbar() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2">
           <Link to="/login">
-            <Button variant="outline" size="sm">शिक्षक लॉगिन</Button>
+            <Button variant="outline" size="sm">शिक्षक</Button>
           </Link>
           <Link to="/login?role=parent">
-            <Button size="sm">पालक पोर्टल</Button>
+            <Button variant="outline" size="sm">पालक</Button>
+          </Link>
+          <Link to="/login?role=student">
+            <Button size="sm">विद्यार्थी</Button>
           </Link>
         </div>
 
-        {/* Mobile toggle */}
         <button className="md:hidden p-2" onClick={() => setOpen(!open)}>
           {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
-      {/* Mobile menu */}
       {open && (
         <div className="md:hidden border-t border-border bg-card px-4 pb-4">
           {navLinks.map((l) => (
@@ -68,8 +68,9 @@ export function PublicNavbar() {
             </Link>
           ))}
           <div className="flex gap-2 mt-3">
-            <Link to="/login" className="flex-1"><Button variant="outline" size="sm" className="w-full">शिक्षक लॉगिन</Button></Link>
-            <Link to="/login?role=parent" className="flex-1"><Button size="sm" className="w-full">पालक पोर्टल</Button></Link>
+            <Link to="/login" className="flex-1"><Button variant="outline" size="sm" className="w-full">शिक्षक</Button></Link>
+            <Link to="/login?role=parent" className="flex-1"><Button variant="outline" size="sm" className="w-full">पालक</Button></Link>
+            <Link to="/login?role=student" className="flex-1"><Button size="sm" className="w-full">विद्यार्थी</Button></Link>
           </div>
         </div>
       )}

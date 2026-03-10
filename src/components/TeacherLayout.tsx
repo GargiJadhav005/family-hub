@@ -11,6 +11,9 @@ import {
   LogOut,
   Menu,
   X,
+  UserPlus,
+  BarChart3,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -20,9 +23,12 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const teacherLinks = [
   { title: "मुख्य डॅशबोर्ड", url: "/teacher", icon: LayoutDashboard },
+  { title: "विद्यार्थी नोंदणी", url: "/teacher/enroll", icon: UserPlus },
   { title: "विद्यार्थी उपस्थिती", url: "/teacher/attendance", icon: Users },
-  { title: "पालक-शिक्षक सभा", url: "/teacher/meetings", icon: Calendar },
+  { title: "गृहपाठ", url: "/teacher/homework", icon: ClipboardList },
   { title: "प्रगती पुस्तक", url: "/teacher/progress", icon: FileText },
+  { title: "वर्ग विश्लेषण", url: "/teacher/analytics", icon: BarChart3 },
+  { title: "पालक-शिक्षक सभा", url: "/teacher/meetings", icon: Calendar },
   { title: "अभ्यासक्रम (LMS)", url: "/teacher/lms", icon: BookOpen },
 ];
 
@@ -32,12 +38,9 @@ export default function TeacherLayout() {
 
   return (
     <div className="min-h-screen flex bg-muted/30">
-      
-      {/* Sidebar Overlay */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.4 }}
@@ -45,8 +48,6 @@ export default function TeacherLayout() {
               onClick={() => setSidebarOpen(false)}
               className="fixed inset-0 bg-black z-40"
             />
-
-            {/* Sidebar */}
             <motion.aside
               initial={{ x: -260 }}
               animate={{ x: 0 }}
@@ -57,18 +58,13 @@ export default function TeacherLayout() {
               <div className="flex items-center justify-between mb-8">
                 <Link to="/teacher" className="flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-primary" />
-                  <span className="font-semibold text-sm">एल.एम.एस.</span>
+                  <span className="font-semibold text-sm">शिक्षक पोर्टल</span>
                 </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSidebarOpen(false)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-
-              <nav className="space-y-2">
+              <nav className="space-y-1">
                 {teacherLinks.map((item) => (
                   <NavLink
                     key={item.url}
@@ -88,52 +84,37 @@ export default function TeacherLayout() {
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        
-        {/* Header */}
         <header className="h-14 flex items-center justify-between px-6 bg-white border-b">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(true)}
-            >
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
               <Menu className="w-5 h-5" />
             </Button>
             <h1 className="text-sm font-semibold text-muted-foreground hidden sm:block">
               वैनतेय प्राथमिक विद्या मंदिर
             </h1>
           </div>
-
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
             </Button>
-
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                   {user?.name?.charAt(0) || "श"}
                 </AvatarFallback>
               </Avatar>
-
               <div className="hidden sm:block text-right">
                 <p className="text-xs font-medium">{user?.name}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {user?.meta?.subject}
-                </p>
+                <p className="text-[10px] text-muted-foreground">{user?.meta?.subject}</p>
               </div>
             </div>
-
             <Button variant="ghost" size="icon" onClick={logout}>
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </header>
-
-        {/* Page Content */}
         <main className="flex-1 p-6 overflow-auto">
           <Outlet />
         </main>

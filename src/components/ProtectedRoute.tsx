@@ -11,7 +11,12 @@ export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.role !== allowedRole) {
-    return <Navigate to={user?.role === 'teacher' ? '/teacher' : '/parent'} replace />;
+    const redirectMap: Record<UserRole, string> = {
+      teacher: '/teacher',
+      parent: '/parent',
+      student: '/student',
+    };
+    return <Navigate to={redirectMap[user?.role || 'student']} replace />;
   }
 
   return <>{children}</>;

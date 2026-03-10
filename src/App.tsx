@@ -24,38 +24,35 @@ import TeacherAttendance from "@/pages/teacher/TeacherAttendance";
 import TeacherMeetings from "@/pages/teacher/TeacherMeetings";
 import TeacherProgress from "@/pages/teacher/TeacherProgress";
 import TeacherLMS from "@/pages/teacher/TeacherLMS";
+import TeacherEnroll from "@/pages/teacher/TeacherEnroll";
+import TeacherHomework from "@/pages/teacher/TeacherHomework";
+import TeacherAnalytics from "@/pages/teacher/TeacherAnalytics";
 
 // Parent
 import ParentLayout from "@/components/ParentLayout";
 import ParentDashboard from "@/pages/parent/ParentDashboard";
 import ParentProgress from "@/pages/parent/ParentProgress";
-import ParentFees from "@/pages/parent/ParentFees";
-import ParentBus from "@/pages/parent/ParentBus";
 import ParentHomework from "@/pages/parent/ParentHomework";
 
-/* ---------------------------------- */
-/* Query Client Setup (Optimized) */
-/* ---------------------------------- */
+// Student
+import StudentLayout from "@/components/StudentLayout";
+import StudentDashboard from "@/pages/student/StudentDashboard";
+import StudentQuizzes from "@/pages/student/StudentQuizzes";
+import StudentScores from "@/pages/student/StudentScores";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 5,
     },
   },
 });
 
-/* ---------------------------------- */
-/* Scroll To Top On Route Change */
-/* ---------------------------------- */
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 };
 
@@ -68,48 +65,41 @@ function App() {
         <AuthProvider>
           <BrowserRouter>
             <ScrollToTop />
-
             <Routes>
-              {/* ---------------- PUBLIC ROUTES ---------------- */}
+              {/* PUBLIC */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/campus" element={<Campus />} />
               <Route path="/activities" element={<Activities />} />
               <Route path="/admissions" element={<Admissions />} />
 
-              {/* ---------------- TEACHER ROUTES ---------------- */}
-              <Route
-                path="/teacher"
-                element={
-                  <ProtectedRoute allowedRole="teacher">
-                    <TeacherLayout />
-                  </ProtectedRoute>
-                }
-              >
+              {/* TEACHER */}
+              <Route path="/teacher" element={<ProtectedRoute allowedRole="teacher"><TeacherLayout /></ProtectedRoute>}>
                 <Route index element={<TeacherDashboard />} />
+                <Route path="enroll" element={<TeacherEnroll />} />
                 <Route path="attendance" element={<TeacherAttendance />} />
-                <Route path="meetings" element={<TeacherMeetings />} />
+                <Route path="homework" element={<TeacherHomework />} />
                 <Route path="progress" element={<TeacherProgress />} />
+                <Route path="analytics" element={<TeacherAnalytics />} />
+                <Route path="meetings" element={<TeacherMeetings />} />
                 <Route path="lms" element={<TeacherLMS />} />
               </Route>
 
-              {/* ---------------- PARENT ROUTES ---------------- */}
-              <Route
-                path="/parent"
-                element={
-                  <ProtectedRoute allowedRole="parent">
-                    <ParentLayout />
-                  </ProtectedRoute>
-                }
-              >
+              {/* PARENT */}
+              <Route path="/parent" element={<ProtectedRoute allowedRole="parent"><ParentLayout /></ProtectedRoute>}>
                 <Route index element={<ParentDashboard />} />
                 <Route path="progress" element={<ParentProgress />} />
-                <Route path="fees" element={<ParentFees />} />
-                <Route path="bus" element={<ParentBus />} />
                 <Route path="homework" element={<ParentHomework />} />
               </Route>
 
-              {/* ---------------- FALLBACK ---------------- */}
+              {/* STUDENT */}
+              <Route path="/student" element={<ProtectedRoute allowedRole="student"><StudentLayout /></ProtectedRoute>}>
+                <Route index element={<StudentDashboard />} />
+                <Route path="quizzes" element={<StudentQuizzes />} />
+                <Route path="scores" element={<StudentScores />} />
+              </Route>
+
+              {/* FALLBACK */}
               <Route path="/404" element={<NotFound />} />
               <Route path="*" element={<Navigate to="/404" replace />} />
             </Routes>
