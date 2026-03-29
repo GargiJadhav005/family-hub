@@ -15,6 +15,14 @@ export async function getHomework(req: AuthRequest, res: Response): Promise<void
     const query: any = {};
     if (req.user.role === "teacher") {
       query.createdByTeacherId = req.user._id;
+    } else if (req.user.role === "student") {
+      // Filter by the student's class (stored in user.meta)
+      const className = req.user.meta?.get?.("class") || req.user.meta?.class;
+      if (className) {
+        // Find teacher who created homework for this class — or just show all homework
+        // (class-level filtering would require storing className on homework)
+        // For now, show all homework (teacher creates for whole class)
+      }
     }
 
     const homework = await Homework.find(query)
@@ -22,11 +30,13 @@ export async function getHomework(req: AuthRequest, res: Response): Promise<void
       .populate("createdByTeacherId", "name");
 
     const items = homework.map((h: any) => ({
+      _id: h._id.toString(),
       id: h._id.toString(),
       subject: h.subject,
       title: h.title,
       description: h.description,
       dueDate: h.dueDate,
+      completed: false,
       createdAt: h.createdAt,
     }));
 
@@ -36,6 +46,7 @@ export async function getHomework(req: AuthRequest, res: Response): Promise<void
     res.status(500).json({ error: "Internal server error" });
   }
 }
+
 
 export async function createHomework(req: AuthRequest, res: Response): Promise<void> {
   try {

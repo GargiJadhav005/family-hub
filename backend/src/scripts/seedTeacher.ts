@@ -29,9 +29,7 @@ const seedTeacher = async () => {
       passwordHash,
       role: "teacher",
       avatar: null,
-      meta: {
-        createdBy: "seedScript",
-      },
+      meta: new Map([["createdBy", "seedScript"]]),
       isActive: true,
     });
 

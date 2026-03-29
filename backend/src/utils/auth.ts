@@ -9,7 +9,7 @@ export interface AuthTokenPayload {
 
 export function signToken(userId: string, role: UserRole): string {
   const secret = process.env.JWT_SECRET || "dev-secret-change-me";
-  const expiresIn = process.env.JWT_EXPIRES_IN || "7d";
+  const expiresIn = (process.env.JWT_EXPIRES_IN || "7d") as jwt.SignOptions["expiresIn"];
 
   const payload: AuthTokenPayload = {
     sub: userId,

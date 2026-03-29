@@ -14,30 +14,39 @@ const ScoreSchema = z.object({
 
 export async function getScores(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const studentId = req.query.studentId as string;
-    const className = req.query.className as string;
-
     const query: any = {};
+    const forceStudentId = req.query.studentId as string | undefined;
+    const className = req.query.className as string | undefined;
 
-    if (studentId) {
-      query.studentId = studentId;
+    if (forceStudentId) {
+      query.studentId = forceStudentId;
+    } else if (req.user.role === "student") {
+      // Auto-locate the Student record for this user
+      const studentDoc = await Student.findOne({ studentUserId: req.user._id });
+      if (!studentDoc) {
+        res.json({ scores: [] });
+        return;
+      }
+      query.studentId = studentDoc._id;
     } else if (className) {
       const students = await Student.find({ className }).select("_id");
-      const studentIds = students.map((s) => s._id.toString());
-      query.studentId = { $in: studentIds };
+      query.studentId = { $in: students.map((s) => s._id) };
     }
 
     const scores = await Score.find(query)
       .populate("studentId", "name email")
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .limit(20);
 
     const items = scores.map((s: any) => ({
+      _id: s._id.toString(),
       id: s._id.toString(),
-      studentId: s.studentId._id.toString(),
-      studentName: s.studentId.name,
+      studentId: s.studentId?._id?.toString(),
+      studentName: s.studentId?.name,
       subject: s.subject,
-      testName: s.testName,
-      scorePercent: s.scorePercent,
+      title: s.testName,
+      score: s.scorePercent,
+      total: 100,
       grade: s.grade,
       date: s.date,
     }));
@@ -48,6 +57,7 @@ export async function getScores(req: AuthRequest, res: Response): Promise<void> 
     res.status(500).json({ error: "Internal server error" });
   }
 }
+
 
 export async function addScore(req: AuthRequest, res: Response): Promise<void> {
   try {

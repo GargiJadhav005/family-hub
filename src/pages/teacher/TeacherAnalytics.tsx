@@ -41,9 +41,9 @@ export default function TeacherAnalytics() {
         const data = await res.json();
         if (Array.isArray(data.scores)) {
           const mapped: ScoreRecord[] = data.scores.map((s: any) => ({
-            id: s.id,
+            id: s.id ?? s._id,
             subject: s.subject,
-            scorePercent: s.scorePercent,
+            scorePercent: s.score ?? s.scorePercent ?? 0, // API now returns 'score'
           }));
           setScores(mapped);
         }

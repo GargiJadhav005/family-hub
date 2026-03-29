@@ -20,21 +20,22 @@ export default function StudentScores() {
     const token = localStorage.getItem('auth_token');
     if (!token || !user) return;
 
+    // No need to pass studentId — backend auto-detects from JWT for student role
     const load = async () => {
       try {
-        const res = await fetch(`/api/scores?studentId=${encodeURIComponent(user.id)}`, {
+        const res = await fetch(`/api/scores`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data.scores)) {
           const mapped: ScoreRecord[] = data.scores.map((s: any) => ({
-            id: s.id,
+            id: s.id ?? s._id,
             subject: s.subject,
-            testName: s.testName,
-            scorePercent: s.scorePercent,
+            testName: s.title ?? s.testName,       // API returns `title` field
+            scorePercent: s.score ?? s.scorePercent, // API returns `score` field
             grade: s.grade,
-            date: s.date,
+            date: s.date ? new Date(s.date).toLocaleDateString('mr-IN') : '',
           }));
           setScores(mapped);
         }
@@ -45,6 +46,7 @@ export default function StudentScores() {
 
     load();
   }, [user]);
+
 
   const subjectScores = useMemo(
     () => {

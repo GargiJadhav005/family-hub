@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express, { Express } from "express";
+import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { connectDB } from "./utils/db";
 
@@ -10,6 +10,11 @@ import teacherRoutes from "./routes/teacherRoutes";
 import homeworkRoutes from "./routes/homeworkRoutes";
 import attendanceRoutes from "./routes/attendanceRoutes";
 import scoresRoutes from "./routes/scoresRoutes";
+import eventRoutes from "./routes/eventRoutes";
+import meetingRoutes from "./routes/meetingRoutes";
+import instructionRoutes from "./routes/instructionRoutes";
+import quizRoutes from "./routes/quizRoutes";
+
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
@@ -40,6 +45,11 @@ app.use("/api/teacher", teacherRoutes);
 app.use("/api/homework", homeworkRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/scores", scoresRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/meetings", meetingRoutes);
+app.use("/api/instructions", instructionRoutes);
+app.use("/api/quizzes", quizRoutes);
+
 
 // 404 handler
 app.use((req, res) => {
@@ -47,7 +57,7 @@ app.use((req, res) => {
 });
 
 // Error handler
-app.use((err: any, req, res, next) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error("Server error:", err);
   res.status(err.status || 500).json({
     error: err.message || "Internal Server Error",
@@ -58,9 +68,9 @@ app.use((err: any, req, res, next) => {
 async function start() {
   try {
     await connectDB();
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`\n? Server running at http://localhost:${PORT}`);
-      console.log(`? CORS enabled for ${process.env.FRONTEND_URL || "http://localhost:5173"}\n`);
+    app.listen(Number(PORT), "0.0.0.0", () => {
+      console.log(`\n✅ Server running at http://localhost:${PORT}`);
+      console.log(`🔗 CORS enabled for ${process.env.FRONTEND_URL || "http://localhost:5173"}\n`);
     });
   } catch (err) {
     console.error("Failed to start server:", err);

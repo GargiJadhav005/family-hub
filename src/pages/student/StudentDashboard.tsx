@@ -1,79 +1,41 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Gamepad2, BarChart3, BookOpen, Star, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-
-interface RecentScore {
-  subject: string;
-  score: string;
-  test: string;
-  icon: string;
-}
-
-interface HomeworkItem {
-  id: string;
-  subject: string;
-  title: string;
-  dueDate: string;
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { apiCall } from '@/lib/api';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
-  const [recentScores, setRecentScores] = useState<RecentScore[]>([]);
-  const [homework, setHomework] = useState<HomeworkItem[]>([]);
 
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (!token || !user) return;
+  const { data: scoresData } = useQuery({
+    queryKey: ['student-scores'],
+    queryFn: () => apiCall('/scores'),
+    enabled: !!user,
+  });
 
-    const loadScores = async () => {
-      try {
-        const res = await fetch(`/api/scores?studentId=${encodeURIComponent(user.id)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (Array.isArray(data.scores)) {
-          const mapped: RecentScore[] = data.scores.slice(0, 3).map((s: any) => ({
-            subject: s.subject,
-            score: `${s.scorePercent}%`,
-            test: s.testName,
-            icon: '📘',
-          }));
-          setRecentScores(mapped);
-        }
-      } catch {
-        // ignore
-      }
-    };
+  const { data: homeworkData } = useQuery({
+    queryKey: ['student-homework'],
+    queryFn: () => apiCall('/homework'),
+    enabled: !!user,
+  });
 
-    const loadHomework = async () => {
-      try {
-        const res = await fetch('/api/homework', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (Array.isArray(data.homework)) {
-          const mapped: HomeworkItem[] = data.homework.map((h: any) => ({
-            id: h.id,
-            subject: h.subject,
-            title: h.title,
-            dueDate: h.dueDate,
-          }));
-          setHomework(mapped);
-        }
-      } catch {
-        // ignore
-      }
-    };
+  const { data: quizzesData } = useQuery({
+    queryKey: ['student-quizzes'],
+    queryFn: () => apiCall('/quizzes'),
+    enabled: !!user,
+  });
 
-    loadScores();
-    loadHomework();
-  }, [user]);
+  const scores = scoresData?.scores ?? [];
+  const homework = homeworkData?.homework ?? [];
+  const quizzes = quizzesData?.quizzes ?? [];
+  const pendingHomework = homework.filter((h: any) => !h.completed);
+
+  const avgScore = scores.length
+    ? Math.round(scores.reduce((sum: number, s: any) => sum + (s.score / s.total) * 100, 0) / scores.length)
+    : 0;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -96,18 +58,18 @@ export default function StudentDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="stat-card text-center">
           <Trophy className="w-8 h-8 text-warning mx-auto mb-2" />
-          <p className="text-2xl font-extrabold">१२</p>
-          <p className="text-xs text-muted-foreground">एकूण पदके</p>
+          <p className="text-2xl font-extrabold">{quizzes.length}</p>
+          <p className="text-xs text-muted-foreground">उपलब्ध क्विझ</p>
         </div>
         <div className="stat-card text-center">
           <Star className="w-8 h-8 text-primary mx-auto mb-2" />
-          <p className="text-2xl font-extrabold">८५%</p>
+          <p className="text-2xl font-extrabold">{avgScore ? `${avgScore}%` : '—'}</p>
           <p className="text-xs text-muted-foreground">सरासरी गुण</p>
         </div>
         <div className="stat-card text-center">
           <Gamepad2 className="w-8 h-8 text-success mx-auto mb-2" />
-          <p className="text-2xl font-extrabold">८</p>
-          <p className="text-xs text-muted-foreground">पूर्ण केलेल्या क्विझ</p>
+          <p className="text-2xl font-extrabold">{scores.length}</p>
+          <p className="text-xs text-muted-foreground">पूर्ण केलेल्या परीक्षा</p>
         </div>
       </div>
 
@@ -121,18 +83,24 @@ export default function StudentDashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {recentScores.map((s) => (
-              <div key={s.subject} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{s.icon}</span>
-                  <div>
-                    <p className="text-sm font-medium">{s.subject}</p>
-                    <p className="text-xs text-muted-foreground">{s.test}</p>
+            {scores.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">अजून कोणतेही गुण नाहीत</p>
+            ) : (
+              scores.slice(0, 4).map((s: any) => (
+                <div key={s._id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{s.icon || '📝'}</span>
+                    <div>
+                      <p className="text-sm font-medium">{s.subject}</p>
+                      <p className="text-xs text-muted-foreground">{s.title}</p>
+                    </div>
                   </div>
+                  <span className="font-bold text-primary">
+                    {Math.round((s.score / s.total) * 100)}%
+                  </span>
                 </div>
-                <span className="font-bold text-primary">{s.score}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -140,15 +108,19 @@ export default function StudentDashboard() {
         <div className="portal-card p-5">
           <h3 className="font-bold flex items-center gap-2 mb-4"><BookOpen className="w-4 h-4" /> प्रलंबित गृहपाठ</h3>
           <div className="space-y-3">
-            {homework.map((h) => (
-              <div key={h.title} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">{h.subject}</span>
-                  <p className="text-sm font-medium mt-1">{h.title}</p>
+            {pendingHomework.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">कोणताही गृहपाठ नाही! 🎉</p>
+            ) : (
+              pendingHomework.slice(0, 3).map((h: any) => (
+                <div key={h._id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div>
+                    <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">{h.subject}</span>
+                    <p className="text-sm font-medium mt-1">{h.title}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">मुदत: {h.dueDate ? new Date(h.dueDate).toLocaleDateString('mr-IN') : '—'}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">मुदत: {h.dueDate}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           <Link to="/student/quizzes">
             <Button className="w-full mt-4">

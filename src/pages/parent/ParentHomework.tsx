@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BookOpen, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiCall } from '@/lib/api';
 
 interface HomeworkItem {
   id: string;
@@ -20,19 +21,14 @@ export default function ParentHomework() {
   useEffect(() => {
     const loadHomework = async () => {
       try {
-        const token = localStorage.getItem('auth_token');
-        const res = await fetch('/api/homework', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await apiCall('/homework');
         if (Array.isArray(data.homework)) {
           const mapped: HomeworkItem[] = data.homework.map((h: any) => ({
-            id: h.id,
+            id: h._id || h.id,
             subject: h.subject,
             title: h.title,
             description: h.description,
-            dueDate: h.dueDate,
+            dueDate: h.dueDate ? new Date(h.dueDate).toLocaleDateString('mr-IN') : '',
             status: 'pending',
           }));
           setHomework(mapped);

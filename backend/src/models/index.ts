@@ -12,3 +12,13 @@ export { Attendance } from "./Attendance";
 export type { AttendanceStatusValue } from "./Attendance";
 
 export { Score } from "./Score";
+
+export { Event } from "./Event";
+export type { EventType, AudienceType } from "./Event";
+
+export { Meeting } from "./Meeting";
+export type { MeetingMode, MeetingStatus } from "./Meeting";
+
+export { Instruction } from "./Instruction";
+
+export { Quiz, QuizResult } from "./Quiz";
