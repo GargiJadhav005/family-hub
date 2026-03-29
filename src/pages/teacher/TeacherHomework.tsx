@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +8,7 @@ import { BookOpen, Plus, Clock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Homework {
-  id: number;
+  id: string;
   subject: string;
   title: string;
   description: string;
@@ -16,41 +16,72 @@ interface Homework {
   createdAt: string;
 }
 
-const initialHomework: Homework[] = [
-  { id: 1, subject: 'गणित', title: 'अपूर्णांक वर्कशीट', description: 'कार्यपुस्तिका पान ४५-४६ पूर्ण करा.', dueDate: '२९ ऑक्टो', createdAt: '२७ ऑक्टो' },
-  { id: 2, subject: 'मराठी', title: 'निबंध लेखन', description: "'माझा आवडता प्राणी' या विषयावर १० ओळी लिहा.", dueDate: '३१ ऑक्टो', createdAt: '२७ ऑक्टो' },
-  { id: 3, subject: 'विज्ञान', title: 'पानांचे संकलन', description: '५ वेगवेगळ्या प्रकारची पाने गोळा करा.', dueDate: '२ नोव्हें', createdAt: '२६ ऑक्टो' },
-];
-
 export default function TeacherHomework() {
-  const [homeworkList, setHomeworkList] = useState<Homework[]>(initialHomework);
+  const [homeworkList, setHomeworkList] = useState<Homework[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [subject, setSubject] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
 
-  const handleAdd = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadHomework = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const res = await fetch('/api/homework', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.homework)) {
+          setHomeworkList(data.homework);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    loadHomework();
+  }, []);
+
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject || !title || !description) {
       toast.error('कृपया सर्व माहिती भरा');
       return;
     }
-    const newHw: Homework = {
-      id: Date.now(),
-      subject,
-      title,
-      description,
-      dueDate: dueDate || 'निर्धारित नाही',
-      createdAt: 'आज',
-    };
-    setHomeworkList([newHw, ...homeworkList]);
-    setShowForm(false);
-    setSubject('');
-    setTitle('');
-    setDescription('');
-    setDueDate('');
-    toast.success('गृहपाठ यशस्वीरित्या दिला!');
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/homework', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ subject, title, description, dueDate }),
+      });
+      if (!res.ok) {
+        toast.error('गृहपाठ जतन करण्यात अडचण आली');
+        return;
+      }
+      const data = await res.json();
+      const newHw: Homework = {
+        id: data.id,
+        subject: data.subject,
+        title: data.title,
+        description: data.description,
+        dueDate: data.dueDate,
+        createdAt: data.createdAt,
+      };
+      setHomeworkList((prev) => [newHw, ...prev]);
+      setShowForm(false);
+      setSubject('');
+      setTitle('');
+      setDescription('');
+      setDueDate('');
+      toast.success('गृहपाठ यशस्वीरित्या दिला!');
+    } catch {
+      toast.error('गृहपाठ जतन करण्यात अडचण आली');
+    }
   };
 
   return (

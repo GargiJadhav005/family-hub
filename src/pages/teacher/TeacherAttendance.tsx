@@ -1,24 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, AlertCircle, Save, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
-const allStudents = [
-  { id: 1, name: 'आरव पाटील', roll: '०१', status: 'present' as string },
-  { id: 2, name: 'अनन्या शर्मा', roll: '०२', status: 'present' as string },
-  { id: 3, name: 'विहान जोशी', roll: '०३', status: 'absent' as string },
-  { id: 4, name: 'सारा देशमुख', roll: '०४', status: 'present' as string },
-  { id: 5, name: 'कबीर मोरे', roll: '०५', status: 'late' as string },
-  { id: 6, name: 'मीरा कुलकर्णी', roll: '०६', status: 'present' as string },
-  { id: 7, name: 'रोहन गायकवाड', roll: '०७', status: 'present' as string },
-  { id: 8, name: 'पूजा ठाकूर', roll: '०८', status: 'absent' as string },
-];
+interface AttendanceStudent {
+  id: string;
+  name: string;
+  roll: string;
+  status: string;
+}
 
 export default function TeacherAttendance() {
-  const [students, setStudents] = useState(allStudents);
+  const [students, setStudents] = useState<AttendanceStudent[]>([]);
 
-  const setStatus = (id: number, status: string) => {
+  useEffect(() => {
+    const loadStudents = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        const res = await fetch('/api/students', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.students)) {
+          const mapped: AttendanceStudent[] = data.students.map((s: any, index: number) => ({
+            id: s.id,
+            name: s.name,
+            roll: s.roll || String(index + 1).padStart(2, '0'),
+            status: 'present',
+          }));
+          setStudents(mapped);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    loadStudents();
+  }, []);
+
+  const setStatus = (id: string, status: string) => {
     setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
   };
 
@@ -32,6 +54,35 @@ export default function TeacherAttendance() {
     late: students.filter((s) => s.status === 'late').length,
   };
 
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          date: today,
+          records: students.map((s) => ({
+            studentId: s.id,
+            status: s.status,
+          })),
+        }),
+      });
+      if (!res.ok) {
+        toast.error('हजेरी जतन करण्यात अडचण आली');
+        return;
+      }
+      toast.success('हजेरी जतन केली!');
+    } catch {
+      toast.error('हजेरी जतन करण्यात अडचण आली');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -41,7 +92,7 @@ export default function TeacherAttendance() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => markAll('present')}>सर्व हजर</Button>
-          <Button size="sm" onClick={() => { toast.success('हजेरी जतन केली!'); }}>
+          <Button size="sm" onClick={handleSave}>
             <Save className="w-4 h-4 mr-1" /> जतन करा
           </Button>
         </div>

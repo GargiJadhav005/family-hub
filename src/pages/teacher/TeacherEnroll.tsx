@@ -21,18 +21,22 @@ export default function TeacherEnroll() {
     parentPassword: string;
   } | null>(null);
 
-  const handleEnroll = (e: React.FormEvent) => {
+  const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !parentName || !className) {
       toast.error('कृपया सर्व माहिती भरा');
       return;
     }
-    const result = enrollStudent(name, parentName, className);
-    setLastEnrolled(result);
-    setName('');
-    setParentName('');
-    setClassName('');
-    toast.success(`${result.name} यशस्वीरित्या नोंदणी झाली!`);
+    try {
+      const result = await enrollStudent(name, parentName, className);
+      setLastEnrolled(result);
+      setName('');
+      setParentName('');
+      setClassName('');
+      toast.success(`${result.name} यशस्वीरित्या नोंदणी झाली!`);
+    } catch {
+      toast.error('नोंदणी अयशस्वी झाली. कृपया पुन्हा प्रयत्न करा.');
+    }
   };
 
   const copyToClipboard = (text: string) => {

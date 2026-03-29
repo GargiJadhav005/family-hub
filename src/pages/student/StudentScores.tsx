@@ -1,25 +1,71 @@
+import { useEffect, useMemo, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { useAuth } from '@/contexts/AuthContext';
 
-const subjectScores = [
-  { subject: 'मराठी', score: 92 },
-  { subject: 'गणित', score: 85 },
-  { subject: 'इंग्रजी', score: 78 },
-  { subject: 'विज्ञान', score: 88 },
-  { subject: 'परिसर अभ्यास', score: 90 },
-];
-
-const testHistory = [
-  { id: 1, subject: 'गणित', test: 'घटक चाचणी ३', score: '८५%', date: '२५ ऑक्टो', grade: 'A' },
-  { id: 2, subject: 'मराठी', test: 'साप्ताहिक चाचणी ५', score: '९२%', date: '२३ ऑक्टो', grade: 'A+' },
-  { id: 3, subject: 'विज्ञान', test: 'प्रकल्प मूल्यांकन', score: '७८%', date: '२० ऑक्टो', grade: 'B+' },
-  { id: 4, subject: 'इंग्रजी', test: 'Spelling Test', score: '७०%', date: '१८ ऑक्टो', grade: 'B' },
-  { id: 5, subject: 'गणित', test: 'घटक चाचणी २', score: '९०%', date: '१५ ऑक्टो', grade: 'A+' },
-  { id: 6, subject: 'परिसर अभ्यास', test: 'मौखिक चाचणी', score: '९५%', date: '१२ ऑक्टो', grade: 'A+' },
-  { id: 7, subject: 'मराठी', test: 'शुद्धलेखन', score: '८८%', date: '१० ऑक्टो', grade: 'A' },
-];
+interface ScoreRecord {
+  id: string;
+  subject: string;
+  testName: string;
+  scorePercent: number;
+  grade: string;
+  date: string;
+}
 
 export default function StudentScores() {
+  const { user } = useAuth();
+  const [scores, setScores] = useState<ScoreRecord[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token || !user) return;
+
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/scores?studentId=${encodeURIComponent(user.id)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.scores)) {
+          const mapped: ScoreRecord[] = data.scores.map((s: any) => ({
+            id: s.id,
+            subject: s.subject,
+            testName: s.testName,
+            scorePercent: s.scorePercent,
+            grade: s.grade,
+            date: s.date,
+          }));
+          setScores(mapped);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    load();
+  }, [user]);
+
+  const subjectScores = useMemo(
+    () => {
+      const bySubject: Record<string, { subject: string; total: number; count: number }> = {};
+      for (const s of scores) {
+        if (!bySubject[s.subject]) {
+          bySubject[s.subject] = { subject: s.subject, total: 0, count: 0 };
+        }
+        bySubject[s.subject].total += s.scorePercent;
+        bySubject[s.subject].count += 1;
+      }
+      return Object.values(bySubject).map((v) => ({
+        subject: v.subject,
+        score: v.total / v.count,
+      }));
+    },
+    [scores]
+  );
+
+  const testHistory = scores;
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
@@ -72,9 +118,9 @@ export default function StudentScores() {
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">{t.subject}</span>
                   </td>
-                  <td className="p-3 text-sm font-medium">{t.test}</td>
+                  <td className="p-3 text-sm font-medium">{t.testName}</td>
                   <td className="p-3 text-sm text-muted-foreground">{t.date}</td>
-                  <td className="p-3 text-center text-sm font-bold">{t.score}</td>
+                  <td className="p-3 text-center text-sm font-bold">{t.scorePercent}%</td>
                   <td className="p-3 text-center">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       t.grade.includes('+') ? 'bg-success/10 text-success' :

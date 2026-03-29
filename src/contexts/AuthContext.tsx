@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { apiCall, API_BASE_URL } from '@/lib/api';
 
 export type UserRole = 'teacher' | 'parent' | 'student';
 
@@ -29,45 +30,10 @@ interface AuthContextType {
   login: (email: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
   enrolledStudents: EnrolledStudent[];
-  enrollStudent: (name: string, parentName: string, className: string) => EnrolledStudent;
+  enrollStudent: (name: string, parentName: string, className: string) => Promise<EnrolledStudent>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-const MOCK_USERS: Record<string, User & { password: string }> = {
-  'teacher@school.edu': {
-    id: 't1',
-    name: 'श्री. सचिन मोरे',
-    role: 'teacher',
-    email: 'teacher@school.edu',
-    password: 'teacher123',
-    meta: { class: 'इयत्ता ४-ब', subject: 'वर्गशिक्षक' },
-  },
-  'parent@school.edu': {
-    id: 'p1',
-    name: 'सौ. पाटील',
-    role: 'parent',
-    email: 'parent@school.edu',
-    password: 'parent123',
-    meta: { child: 'आरव पाटील', class: 'इयत्ता ३-ब' },
-  },
-  'student@school.edu': {
-    id: 's1',
-    name: 'आरव पाटील',
-    role: 'student',
-    email: 'student@school.edu',
-    password: 'student123',
-    meta: { class: 'इयत्ता ३-ब', roll: '०१' },
-  },
-};
-
-function generateId() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
-
-function generatePassword() {
-  return 'Pass' + Math.floor(1000 + Math.random() * 9000);
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
@@ -75,114 +41,109 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>(() => {
-    const stored = localStorage.getItem('enrolled_students');
-    return stored ? JSON.parse(stored) : [
-      {
-        id: 'STU001',
-        name: 'आरव पाटील',
-        roll: '०१',
-        class: 'इयत्ता ३-ब',
-        parentName: 'सौ. पाटील',
-        studentEmail: 'student@school.edu',
-        studentPassword: 'student123',
-        parentEmail: 'parent@school.edu',
-        parentPassword: 'parent123',
-      },
-    ];
-  });
+  const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
+
+  // Restore logged-in user from backend using stored token
+  useEffect(() => {
+    const restore = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        
+        const data = await apiCall('/auth/me');
+        if (data.user) {
+          setUser(data.user);
+          localStorage.setItem('school_user', JSON.stringify(data.user));
+        }
+      } catch (err) {
+        console.error('Failed to restore user session:', err);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('school_user');
+      }
+    };
+    restore();
+  }, []);
 
   const login = useCallback(async (email: string, password: string, role: UserRole): Promise<boolean> => {
-    // Check mock users first
-    const mockUser = MOCK_USERS[email];
-    if (mockUser && mockUser.password === password && mockUser.role === role) {
-      const { password: _, ...userData } = mockUser;
-      setUser(userData);
-      localStorage.setItem('school_user', JSON.stringify(userData));
+    try {
+      const data = await apiCall('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, role }),
+      });
+
+      if (!data.user || !data.token) return false;
+
+      setUser(data.user);
+      localStorage.setItem('school_user', JSON.stringify(data.user));
+      localStorage.setItem('auth_token', data.token);
       return true;
+    } catch (err) {
+      console.error('Login error:', err);
+      return false;
     }
-
-    // Check dynamically enrolled students/parents
-    const stored = localStorage.getItem('enrolled_students');
-    const students: EnrolledStudent[] = stored ? JSON.parse(stored) : [];
-    
-    for (const s of students) {
-      if (role === 'student' && s.studentEmail === email && s.studentPassword === password) {
-        const userData: User = {
-          id: s.id,
-          name: s.name,
-          role: 'student',
-          email: s.studentEmail,
-          meta: { class: s.class, roll: s.roll },
-        };
-        setUser(userData);
-        localStorage.setItem('school_user', JSON.stringify(userData));
-        return true;
-      }
-      if (role === 'parent' && s.parentEmail === email && s.parentPassword === password) {
-        const userData: User = {
-          id: 'p-' + s.id,
-          name: s.parentName,
-          role: 'parent',
-          email: s.parentEmail,
-          meta: { child: s.name, class: s.class },
-        };
-        setUser(userData);
-        localStorage.setItem('school_user', JSON.stringify(userData));
-        return true;
-      }
-    }
-
-    return false;
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('school_user');
+    localStorage.removeItem('auth_token');
   }, []);
 
-  const enrollStudent = useCallback((name: string, parentName: string, className: string): EnrolledStudent => {
-    const id = 'STU' + generateId();
-    const rollNum = String(enrolledStudents.length + 1).padStart(2, '0');
-    const studentEmail = name.toLowerCase().replace(/\s/g, '.').replace(/[^a-z.]/g, '') + '@school.edu';
-    const parentEmail = 'parent.' + name.toLowerCase().replace(/\s/g, '.').replace(/[^a-z.]/g, '') + '@school.edu';
-    
-    const newStudent: EnrolledStudent = {
-      id,
-      name,
-      roll: rollNum,
-      class: className,
-      parentName,
-      studentEmail,
-      studentPassword: generatePassword(),
-      parentEmail,
-      parentPassword: generatePassword(),
-    };
+  const enrollStudent = useCallback(async (name: string, parentName: string, className: string): Promise<EnrolledStudent> => {
+    try {
+      const data = await apiCall('/teacher/enroll', {
+        method: 'POST',
+        body: JSON.stringify({ name, parentName, className }),
+      });
 
-    const updated = [...enrolledStudents, newStudent];
-    setEnrolledStudents(updated);
-    localStorage.setItem('enrolled_students', JSON.stringify(updated));
+      const newStudent: EnrolledStudent = {
+        id: data.id,
+        name: data.name,
+        roll: data.roll,
+        class: data.class,
+        parentName: data.parentName,
+        studentEmail: data.studentEmail,
+        studentPassword: data.studentPassword,
+        parentEmail: data.parentEmail,
+        parentPassword: data.parentPassword,
+      };
 
-    // Also add to MOCK_USERS dynamically
-    MOCK_USERS[studentEmail] = {
-      id,
-      name,
-      role: 'student',
-      email: studentEmail,
-      password: newStudent.studentPassword,
-      meta: { class: className, roll: rollNum },
-    };
-    MOCK_USERS[parentEmail] = {
-      id: 'p-' + id,
-      name: parentName,
-      role: 'parent',
-      email: parentEmail,
-      password: newStudent.parentPassword,
-      meta: { child: name, class: className },
-    };
+      setEnrolledStudents((prev) => [...prev, newStudent]);
+      return newStudent;
+    } catch (err) {
+      console.error('Enrollment error:', err);
+      throw err;
+    }
+  }, []);
 
-    return newStudent;
-  }, [enrolledStudents]);
+  // Load students on mount
+  useEffect(() => {
+    const loadStudents = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        
+        const data = await apiCall('/students');
+        if (Array.isArray(data.students)) {
+          const mapped: EnrolledStudent[] = data.students.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            roll: s.roll,
+            class: s.class,
+            parentName: s.parentName,
+            studentEmail: s.studentEmail,
+            studentPassword: '',
+            parentEmail: s.parentEmail,
+            parentPassword: '',
+          }));
+          setEnrolledStudents(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to load students:', err);
+      }
+    };
+    loadStudents();
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, enrolledStudents, enrollStudent }}>

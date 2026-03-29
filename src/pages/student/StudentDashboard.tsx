@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { Gamepad2, BarChart3, BookOpen, Star, Trophy } from 'lucide-react';
@@ -5,19 +6,74 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
-const recentScores = [
-  { subject: 'गणित', score: '८५%', test: 'घटक चाचणी ३', icon: '📐' },
-  { subject: 'मराठी', score: '९२%', test: 'साप्ताहिक चाचणी', icon: '📖' },
-  { subject: 'विज्ञान', score: '७८%', test: 'प्रकल्प मूल्यांकन', icon: '🔬' },
-];
+interface RecentScore {
+  subject: string;
+  score: string;
+  test: string;
+  icon: string;
+}
 
-const homework = [
-  { subject: 'गणित', title: 'अपूर्णांक वर्कशीट', due: 'उद्या' },
-  { subject: 'मराठी', title: 'निबंध लेखन', due: 'शुक्रवार' },
-];
+interface HomeworkItem {
+  id: string;
+  subject: string;
+  title: string;
+  dueDate: string;
+}
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const [recentScores, setRecentScores] = useState<RecentScore[]>([]);
+  const [homework, setHomework] = useState<HomeworkItem[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token || !user) return;
+
+    const loadScores = async () => {
+      try {
+        const res = await fetch(`/api/scores?studentId=${encodeURIComponent(user.id)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.scores)) {
+          const mapped: RecentScore[] = data.scores.slice(0, 3).map((s: any) => ({
+            subject: s.subject,
+            score: `${s.scorePercent}%`,
+            test: s.testName,
+            icon: '📘',
+          }));
+          setRecentScores(mapped);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const loadHomework = async () => {
+      try {
+        const res = await fetch('/api/homework', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.homework)) {
+          const mapped: HomeworkItem[] = data.homework.map((h: any) => ({
+            id: h.id,
+            subject: h.subject,
+            title: h.title,
+            dueDate: h.dueDate,
+          }));
+          setHomework(mapped);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    loadScores();
+    loadHomework();
+  }, [user]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -90,7 +146,7 @@ export default function StudentDashboard() {
                   <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">{h.subject}</span>
                   <p className="text-sm font-medium mt-1">{h.title}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">मुदत: {h.due}</span>
+                <span className="text-xs text-muted-foreground">मुदत: {h.dueDate}</span>
               </div>
             ))}
           </div>
