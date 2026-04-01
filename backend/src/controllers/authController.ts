@@ -7,7 +7,7 @@ import { z } from "zod";
 const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  role: z.enum(["teacher", "parent", "student"]).optional(),
+  role: z.enum(["teacher", "parent", "student", "admin"]).optional(),
 });
 
 export async function login(req: Request, res: Response): Promise<void> {

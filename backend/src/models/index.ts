@@ -22,3 +22,11 @@ export type { MeetingMode, MeetingStatus } from "./Meeting";
 export { Instruction } from "./Instruction";
 
 export { Quiz, QuizResult } from "./Quiz";
+
+export { Enquiry } from "./Enquiry";
+
+export { Announcement } from "./Announcement";
+export type { AnnouncementAudience } from "./Announcement";
+
+export { Notification } from "./Notification";
+export type { NotificationEvent } from "./Notification";

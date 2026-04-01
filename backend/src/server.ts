@@ -14,6 +14,8 @@ import eventRoutes from "./routes/eventRoutes";
 import meetingRoutes from "./routes/meetingRoutes";
 import instructionRoutes from "./routes/instructionRoutes";
 import quizRoutes from "./routes/quizRoutes";
+import adminRoutes from "./routes/adminRoutes";
+import enquiryRoutes from "./routes/enquiryRoutes";
 
 
 const app: Express = express();
@@ -49,6 +51,8 @@ app.use("/api/events", eventRoutes);
 app.use("/api/meetings", meetingRoutes);
 app.use("/api/instructions", instructionRoutes);
 app.use("/api/quizzes", quizRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/enquiry", enquiryRoutes);
 
 
 // 404 handler

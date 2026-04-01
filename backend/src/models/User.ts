@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-export type UserRole = "teacher" | "parent" | "student";
+export type UserRole = "teacher" | "parent" | "student" | "admin";
 
 const userSchema = new mongoose.Schema(
   {
@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["teacher", "parent", "student"],
+      enum: ["teacher", "parent", "student", "admin"],
       required: true,
     },
     avatar: {
