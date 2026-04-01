@@ -19,6 +19,10 @@ const homeworkStatusSchema = new mongoose.Schema(
       enum: ["pending", "in_progress", "completed"],
       default: "pending",
     },
+    feedback: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );

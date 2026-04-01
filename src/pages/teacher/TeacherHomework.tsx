@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BookOpen, Plus, Clock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiCall } from '@/lib/api';
 
 interface Homework {
   id: string;
   subject: string;
   title: string;
   description: string;
+  className: string;
   dueDate: string;
   createdAt: string;
 }
@@ -22,22 +24,18 @@ export default function TeacherHomework() {
   const [subject, setSubject] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [className, setClassName] = useState('');
   const [dueDate, setDueDate] = useState('');
 
   useEffect(() => {
     const loadHomework = async () => {
       try {
-        const token = localStorage.getItem('auth_token');
-        const res = await fetch('/api/homework', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await apiCall('/homework');
         if (Array.isArray(data.homework)) {
           setHomeworkList(data.homework);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        console.error('Failed to load homework:', err);
       }
     };
     loadHomework();
@@ -45,42 +43,36 @@ export default function TeacherHomework() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject || !title || !description) {
+    if (!subject || !title || !description || !className) {
       toast.error('कृपया सर्व माहिती भरा');
       return;
     }
     try {
-      const token = localStorage.getItem('auth_token');
-      const res = await fetch('/api/homework', {
+      const data = await apiCall('/homework', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ subject, title, description, dueDate }),
+        body: JSON.stringify({ subject, title, description, className, dueDate }),
       });
-      if (!res.ok) {
-        toast.error('गृहपाठ जतन करण्यात अडचण आली');
-        return;
-      }
-      const data = await res.json();
+      const homeworkData = data.homework || data;
       const newHw: Homework = {
-        id: data.id,
-        subject: data.subject,
-        title: data.title,
-        description: data.description,
-        dueDate: data.dueDate,
-        createdAt: data.createdAt,
+        id: homeworkData.id,
+        subject: homeworkData.subject,
+        title: homeworkData.title,
+        description: homeworkData.description,
+        className: homeworkData.className,
+        dueDate: homeworkData.dueDate,
+        createdAt: homeworkData.createdAt,
       };
       setHomeworkList((prev) => [newHw, ...prev]);
       setShowForm(false);
       setSubject('');
       setTitle('');
       setDescription('');
+      setClassName('');
       setDueDate('');
       toast.success('गृहपाठ यशस्वीरित्या दिला!');
-    } catch {
+    } catch (err) {
       toast.error('गृहपाठ जतन करण्यात अडचण आली');
+      console.error('Homework creation error:', err);
     }
   };
 
@@ -117,17 +109,33 @@ export default function TeacherHomework() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>शीर्षक</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="गृहपाठाचे शीर्षक" />
+                <Label>इयत्ता</Label>
+                <Select value={className} onValueChange={setClassName}>
+                  <SelectTrigger><SelectValue placeholder="इयत्ता निवडा" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="इयत्ता १-अ">इयत्ता १-अ</SelectItem>
+                    <SelectItem value="इयत्ता १-ब">इयत्ता १-ब</SelectItem>
+                    <SelectItem value="इयत्ता २-अ">इयत्ता २-अ</SelectItem>
+                    <SelectItem value="इयत्ता २-ब">इयत्ता २-ब</SelectItem>
+                    <SelectItem value="इयत्ता ३-अ">इयत्ता ३-अ</SelectItem>
+                    <SelectItem value="इयत्ता ३-ब">इयत्ता ३-ब</SelectItem>
+                    <SelectItem value="इयत्ता ४-अ">इयत्ता ४-अ</SelectItem>
+                    <SelectItem value="इयत्ता ४-ब">इयत्ता ४-ब</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
+              <Label>शीर्षक</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="गृहपाठाचे शीर्षक" required />
+            </div>
+            <div className="space-y-2">
               <Label>तपशील</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="गृहपाठाचे तपशीलवार वर्णन..." rows={3} />
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="गृहपाठाचे तपशीलवार वर्णन..." rows={3} required />
             </div>
             <div className="space-y-2">
               <Label>मुदत</Label>
-              <Input value={dueDate} onChange={(e) => setDueDate(e.target.value)} placeholder="उदा. ३० ऑक्टोबर" />
+              <Input value={dueDate} onChange={(e) => setDueDate(e.target.value)} placeholder="उदा. १५ नोव्हेंबर" />
             </div>
             <div className="flex gap-2">
               <Button type="submit">गृहपाठ पाठवा</Button>

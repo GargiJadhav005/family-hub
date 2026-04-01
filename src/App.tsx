@@ -40,6 +40,10 @@ import StudentDashboard from "@/pages/student/StudentDashboard";
 import StudentQuizzes from "@/pages/student/StudentQuizzes";
 import StudentScores from "@/pages/student/StudentScores";
 
+// Admin
+import AdminLayout from "@/components/AdminLayout";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -97,6 +101,11 @@ function App() {
                 <Route index element={<StudentDashboard />} />
                 <Route path="quizzes" element={<StudentQuizzes />} />
                 <Route path="scores" element={<StudentScores />} />
+              </Route>
+
+              {/* ADMIN */}
+              <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><AdminLayout /></ProtectedRoute>}>
+                <Route index element={<AdminDashboard />} />
               </Route>
 
               {/* FALLBACK */}

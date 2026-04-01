@@ -44,7 +44,19 @@ export async function markAttendance(req: AuthRequest, res: Response): Promise<v
     const body = AttendanceBodySchema.parse(req.body);
     const { date, records } = body;
 
-    await Promise.all(
+    // Validate that all student IDs exist
+    const { User } = await import("../models");
+    const studentIds = records.map((r) => r.studentId);
+    const existingStudents = await User.countDocuments({
+      _id: { $in: studentIds },
+    });
+
+    if (existingStudents !== studentIds.length) {
+      res.status(400).json({ error: "One or more student IDs do not exist" });
+      return;
+    }
+
+    const results = await Promise.all(
       records.map((r) =>
         Attendance.findOneAndUpdate(
           { studentId: r.studentId, date },
@@ -54,12 +66,16 @@ export async function markAttendance(req: AuthRequest, res: Response): Promise<v
             status: r.status,
             markedByTeacherId: req.user._id,
           },
-          { upsert: true }
+          { upsert: true, new: true }
         )
       )
     );
 
-    res.json({ ok: true });
+    res.json({ 
+      ok: true,
+      message: `Attendance marked for ${results.length} students on ${date}`,
+      recordsCount: results.length,
+    });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid input", details: err.errors });

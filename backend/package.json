@@ -12,7 +12,9 @@
         "typecheck": "tsc --noEmit",
         "seed": "tsx src/scripts/seedTeacher.ts",
         "seed:all": "tsx src/scripts/seedAll.ts",
-        "seed:admin": "tsx src/scripts/seedAdmin.ts"
+        "seed:admin": "tsx src/scripts/seedAdmin.ts",
+        "seed:users": "tsx src/scripts/seedUsers.ts",
+        "seed:reset": "tsx -e \"import('./src/scripts/seedUsers').then(m => m.resetToDemo()).catch(e => process.exit(1))\""
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",

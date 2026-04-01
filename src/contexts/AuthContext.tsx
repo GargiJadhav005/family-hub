@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { apiCall, API_BASE_URL } from '@/lib/api';
 
-export type UserRole = 'teacher' | 'parent' | 'student';
+export type UserRole = 'teacher' | 'parent' | 'student' | 'admin';
 
 interface User {
   id: string;
@@ -96,16 +96,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ name, parentName, className }),
       });
 
+      const studentData = data.student || data;
       const newStudent: EnrolledStudent = {
-        id: data.id,
-        name: data.name,
-        roll: data.roll,
-        class: data.class,
-        parentName: data.parentName,
-        studentEmail: data.studentEmail,
-        studentPassword: data.studentPassword,
-        parentEmail: data.parentEmail,
-        parentPassword: data.parentPassword,
+        id: studentData.id,
+        name: studentData.name,
+        roll: studentData.roll,
+        class: studentData.class,
+        parentName: studentData.parentName,
+        studentEmail: studentData.studentEmail,
+        studentPassword: studentData.studentPassword,
+        parentEmail: studentData.parentEmail,
+        parentPassword: studentData.parentPassword,
       };
 
       setEnrolledStudents((prev) => [...prev, newStudent]);

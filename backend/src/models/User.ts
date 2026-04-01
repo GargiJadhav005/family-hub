@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -41,5 +40,8 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Compound index: email unique per role
+userSchema.index({ email: 1, role: 1 }, { unique: true });
 
 export const User = mongoose.model("User", userSchema);

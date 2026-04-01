@@ -1,14 +1,15 @@
-# Family Hub - School Management System
+# Family Hub - School Management System - Architecture
 
-## Architecture Overview
+## System Overview
 
-This project uses a **modern full-stack architecture**:
+**Family Hub** is a comprehensive school management system built with modern full-stack technologies:
 
-- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
-- **Backend**: Node.js + Express.js + MongoDB + Mongoose
-- **Architecture Pattern**: MVC (Model-View-Controller)
-- **Authentication**: JWT with secure HTTP-only cookies
-- **Database**: MongoDB (Atlas or local)
+- **Frontend**: React 18 + TypeScript, Vite bundler, Tailwind CSS, ShadcN UI components
+- **Backend**: Express.js + TypeScript, MVC architecture, JWT authentication
+- **Database**: MongoDB + Mongoose ODM, compound indexing for performance
+- **Authentication**: JWT tokens (7-day expiry), per-role email uniqueness, bcryptjs password hashing
+- **User Roles**: 4 distinct roles (teacher, parent, student, admin) with role-based access control
+- **API Pattern**: RESTful with standardized response formats (Phase 2 implementation)
 
 ---
 
@@ -17,61 +18,201 @@ This project uses a **modern full-stack architecture**:
 ```
 family-hub/
 +-- frontend/                   # React SPA (port 5173)
-¶   +-- src/
-¶   ¶   +-- components/        # Reusable React components
-¶   ¶   +-- pages/            # Page components
-¶   ¶   +-- contexts/         # React Context (Auth)
-¶   ¶   +-- hooks/            # Custom React hooks
-¶   ¶   +-- lib/              # Utilities (API calls, helpers)
-¶   ¶   +-- App.tsx           # Main app component
-¶   +-- public/
-¶   +-- vite.config.ts
-¶   +-- tsconfig.json
-¶   +-- package.json
-¶   +-- .env.frontend         # Frontend env vars
+ÔøΩ   +-- src/
+ÔøΩ   ÔøΩ   +-- components/        # Reusable React components
+ÔøΩ   ÔøΩ   +-- pages/            # Page components
+ÔøΩ   ÔøΩ   +-- contexts/         # React Context (Auth)
+ÔøΩ   ÔøΩ   +-- hooks/            # Custom React hooks
+ÔøΩ   ÔøΩ   +-- lib/              # Utilities (API calls, helpers)
+ÔøΩ   ÔøΩ   +-- App.tsx           # Main app component
+ÔøΩ   +-- public/
+ÔøΩ   +-- vite.config.ts
+ÔøΩ   +-- tsconfig.json
+ÔøΩ   +-- package.json
+ÔøΩ   +-- .env.frontend         # Frontend env vars
 
 +-- backend/                    # Express.js API (port 5000)
-¶   +-- src/
-¶   ¶   +-- models/           # Mongoose schemas
-¶   ¶   ¶   +-- User.ts
-¶   ¶   ¶   +-- Student.ts
-¶   ¶   ¶   +-- Homework.ts
-¶   ¶   ¶   +-- HomeworkStatus.ts
-¶   ¶   ¶   +-- Attendance.ts
-¶   ¶   ¶   +-- Score.ts
-¶   ¶   ¶   +-- index.ts      # Model exports
-¶   ¶   ¶
-¶   ¶   +-- controllers/      # Business logic
-¶   ¶   ¶   +-- authController.ts
-¶   ¶   ¶   +-- studentController.ts
-¶   ¶   ¶   +-- teacherController.ts
-¶   ¶   ¶   +-- homeworkController.ts
-¶   ¶   ¶   +-- attendanceController.ts
-¶   ¶   ¶   +-- scoresController.ts
-¶   ¶   ¶
-¶   ¶   +-- routes/           # Express routes
-¶   ¶   ¶   +-- authRoutes.ts
-¶   ¶   ¶   +-- studentRoutes.ts
-¶   ¶   ¶   +-- teacherRoutes.ts
-¶   ¶   ¶   +-- homeworkRoutes.ts
-¶   ¶   ¶   +-- attendanceRoutes.ts
-¶   ¶   ¶   +-- scoresRoutes.ts
-¶   ¶   ¶
-¶   ¶   +-- middleware/       # Express middleware
-¶   ¶   ¶   +-- auth.ts       # JWT verification
-¶   ¶   ¶
-¶   ¶   +-- utils/            # Helper functions
-¶   ¶   ¶   +-- db.ts         # MongoDB connection
-¶   ¶   ¶   +-- auth.ts       # JWT & password utilities
-¶   ¶   ¶
-¶   ¶   +-- server.ts         # Express app setup
-¶   ¶
-¶   +-- .env                  # Backend env vars
-¶   +-- tsconfig.json
-¶   +-- package.json
-¶   +-- .gitignore
+ÔøΩ   +-- src/
+ÔøΩ   ÔøΩ   +-- models/           # Mongoose schemas
+ÔøΩ   ÔøΩ   ÔøΩ   +-- User.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- Student.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- Homework.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- HomeworkStatus.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- Attendance.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- Score.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- index.ts      # Model exports
+ÔøΩ   ÔøΩ   ÔøΩ
+ÔøΩ   ÔøΩ   +-- controllers/      # Business logic
+ÔøΩ   ÔøΩ   ÔøΩ   +-- authController.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- studentController.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- teacherController.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- homeworkController.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- attendanceController.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- scoresController.ts
+ÔøΩ   ÔøΩ   ÔøΩ
+ÔøΩ   ÔøΩ   +-- routes/           # Express routes
+ÔøΩ   ÔøΩ   ÔøΩ   +-- authRoutes.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- studentRoutes.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- teacherRoutes.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- homeworkRoutes.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- attendanceRoutes.ts
+ÔøΩ   ÔøΩ   ÔøΩ   +-- scoresRoutes.ts
+ÔøΩ   ÔøΩ   ÔøΩ
+ÔøΩ   ÔøΩ   +-- middleware/       # Express middleware
+ÔøΩ   ÔøΩ   ÔøΩ   +-- auth.ts       # JWT verification
+ÔøΩ   ÔøΩ   ÔøΩ
+ÔøΩ   ÔøΩ   +-- utils/            # Helper functions
+ÔøΩ   ÔøΩ   ÔøΩ   +-- db.ts         # MongoDB connection
+ÔøΩ   ÔøΩ   ÔøΩ   +-- auth.ts       # JWT & password utilities
+ÔøΩ   ÔøΩ   ÔøΩ
+ÔøΩ   ÔøΩ   +-- server.ts         # Express app setup
+ÔøΩ   ÔøΩ
+ÔøΩ   +-- .env                  # Backend env vars
+ÔøΩ   +-- tsconfig.json
+ÔøΩ   +-- package.json
+ÔøΩ   +-- .gitignore
 
 +-- package.json              # Root workspace (optional)
+```
+
+---
+
+## User Roles & Access Control (RBAC)
+
+**4 Distinct Roles**:
+
+| Role    | Dashboard | Permissions |
+|---------|-----------|------------|
+| **teacher** | /teacher/dashboard | Create/grade homework, mark attendance, assign quizzes, view class scores, enroll students |
+| **parent** | /parent/dashboard | View child's homework, grades, attendance, receive notifications |
+| **student** | /student/dashboard | View homework, submit status, view grades, see schedule |
+| **admin** | /admin/dashboard | Manage users, view system stats, generate reports, configure settings (NEW Phase 1.1) |
+
+**Demo Credentials**:
+```
+Teacher:  teacher@school.edu / teacher123
+Parent:   parent@school.edu / parent123
+Student:  student@school.edu / student123
+Admin:    admin@school.edu / admin123 (NEW)
+```
+
+**Email Uniqueness** (Fixed Phase 1.5):
+- Email unique per-role (compound index: email + role)
+- Allows: same email for student + parent (common family scenario)
+- Example: `ram@example.com` can be both student and parent account
+
+---
+
+## Data Model Architecture
+
+### User Model (Core - Phase 1.5 Updated)
+
+```typescript
+interface User {
+  _id: ObjectId,
+  name: string,
+  email: string,                      // Unique per role
+  password: string,                   // bcryptjs hashed (10 rounds)
+  role: "teacher" | "parent" | "student" | "admin",
+  meta: {
+    class?: string,                   // Student's class (e.g., "10-A")
+    parentEmail?: string,             // Emergency contact
+    department?: string,              // Teacher's department
+  },
+  createdAt: Date,
+  updatedAt: Date,
+}
+
+// Unique compound index enforced (Phase 1.5)
+userSchema.index({email: 1, role: 1}, {unique: true});
+```
+
+### Enrollment Workflow
+
+```
+Teacher creates Student enrollment
+        ‚Üì
+System auto-generates:
+  ‚Ä¢ User (role: student) with temp password
+  ‚Ä¢ User (role: parent) with temp password
+  ‚Ä¢ Student record linking both
+  ‚Üì
+Student assigned to class
+  ‚Üì
+Homework for class visible to all students
+  ‚Üì
+Each student creates HomeworkStatus for tracking
+```
+
+### Homework ‚Üí HomeworkStatus Flow (Phase 1.3 & 2.3 Updated)
+
+```
+1. Teacher creates Homework
+   - Assigns to class (className: "10-A")
+   - Sets dueDate, description
+   
+2. System filters homework by class
+   - Students in class 10-A see this homework
+   - Students in class 9-B don't see it
+   
+3. Student views homework
+   - Creates HomeworkStatus record (one-per-homework)
+   
+4. Student updates status
+   - "NotStarted" ‚Üí "InProgress" ‚Üí "Completed"
+   - Timestamp recorded for each change
+   
+5. Teacher views class submission status
+   - Dashboard shows summary: 15 assigned, 12 completed, 3 pending
+   
+6. Parent views child's homework
+   - Sees due date, completion status, teacher feedback
+```
+
+---
+
+## API Response Format (Standardized - Phase 2.2)
+
+### Single Resource Response (Phase 2.2 ‚úÖ)
+
+```json
+{
+  "student": {
+    "_id": "666abc...",
+    "name": "‡§∞‡§æ‡§ú ‡§ï‡•Å‡§Æ‡§æ‡§∞",
+    "email": "raj@school.edu",
+    "class": "10-A"
+  }
+}
+```
+
+### Multiple Resources Response (Phase 2.2 ‚úÖ)
+
+```json
+{
+  "students": [
+    { "_id": "666abc...", "name": "‡§∞‡§æ‡§ú ‡§ï‡•Å‡§Æ‡§æ‡§∞", "class": "10-A" },
+    { "_id": "666def...", "name": "‡§Ö‡§Æ‡§ø‡§§‡§æ ‡§∂‡§∞‡•ç‡§Æ‡§æ", "class": "10-A" }
+  ]
+}
+```
+
+### Action/Status Response (Phase 2.2 ‚úÖ)
+
+```json
+{
+  "ok": true,
+  "message": "Attendance marked for 25 students"
+}
+```
+
+### Error Response (Phase 2.2 ‚úÖ)
+
+```json
+{
+  "error": "Student not found in this class",
+  "statusCode": 404
+}
 ```
 
 ---
@@ -80,68 +221,79 @@ family-hub/
 
 ### Models (`backend/src/models/`)
 - Define MongoDB schemas using Mongoose
-- Examples: User, Student, Homework, Attendance, Score
+- Examples: User, Student, Homework, Attendance, Score, Quiz, Meeting, Announcement, Notification, Enquiry (13 models total)
 - Handle data structure and validation
+- Enforce compound indexes for query performance
 
 ### Controllers (`backend/src/controllers/`)
 - Contain business logic for each resource
-- Handle validation, DB operations, response formatting
-- Examples: authController, teacherController, homeworkController
-- Export functions that handle HTTP requests
+- Handle validation, DB operations, response formatting (standardized Phase 2.2)
+- Enforce role-based access control
+- Examples: authController, teacherController, homeworkController, adminController (NEW Phase 1.1), studentController
+- Total: 12 controllers handling auth, student, teacher, homework, attendance, scores, quiz, meeting, instruction, event, enquiry, admin (NEW)
 
 ### Routes (`backend/src/routes/`)
 - Define HTTP endpoints and map to controllers
-- Apply middleware (auth, role-based access control)
+- Apply middleware (JWT auth, role validation)
 - Keep route definitions clean and organized
+- 12 route files for different domains (auth, student, teacher, admin (NEW), homework, attendance, scores, quiz, meeting, instruction, event, enquiry)
 
 ### Middleware (`backend/src/middleware/`)
 - Auth middleware: Verify JWT tokens and attach user to request
-- Role-based access control (requireRole)
+- Role-based access control: requireRole("teacher"), requireRole("admin"), etc.
 - Request validation
+- CORS configuration for frontend access
 
 ### Utilities (`backend/src/utils/`)
-- `db.ts`: MongoDB connection and management
-- `auth.ts`: JWT signing/verification, password hashing with bcrypt
+- `db.ts`: MongoDB connection, validation, model indexing
+- `auth.ts`: JWT signing/verification, password hashing with bcryptjs, token expiry (7 days)
+- `email.ts`: Email sending utilities (future integration with SendGrid/SES)
+- `types.ts`: TypeScript interfaces (AuthRequest, AuthResponse)
 
 ---
 
-## API Endpoints
+## API Endpoints (Standardized Phase 2.2)
 
 ### Authentication
-- `POST /api/auth/login` - Login and get JWT token
-- `GET /api/auth/me` - Get current authenticated user
+- `POST /api/auth/login` - Login with email, password, role ‚Üí returns {token, user}
+- `GET /api/auth/me` - Get current authenticated user (refresh token)
+- `POST /api/auth/register` - Register new account
 
-### Students
-- `GET /api/students` - List all students
-- `GET /api/students/:id` - Get student by ID
+### Students (Standardized Phase 2.2 ‚úÖ)
+- `GET /api/students` - List all students (teacher only) ‚Üí {students: [...]}
+- `GET /api/students/:id` - Get student by ID ‚Üí {student: {...}}
+- `POST /api/students` - Create student (admin only)
 
-### Teacher
-- `POST /api/teacher/enroll` - Enroll new student (creates student + parent users)
+### Teachers
+- `POST /api/teacher/enroll` - Enroll new student (creates student + parent users) ‚Üí {student: {...}}
 
-### Homework
-- `GET /api/homework` - Get homework (filtered by teacher if needed)
-- `POST /api/homework` - Create homework (teacher only)
-- `PATCH /api/homework/:id/status` - Update homework completion status
+### Homework (Updated Phase 2.3 ‚úÖ)
+- `GET /api/homework` - Get homework (students: filtered by class, teachers: all) ‚Üí {homeworks: [...]}
+- `POST /api/homework` - Create homework (teacher only) ‚Üí {homework: {...}}
+- `GET /api/homework/:id/status` - Get student's homework status (NEW Phase 1.3) ‚Üí {status: {...}}
+- `PATCH /api/homework/:id/status` - Update homework status by student ‚Üí {ok: true}
 
 ### Attendance
-- `GET /api/attendance?date=YYYY-MM-DD` - Get attendance records
-- `POST /api/attendance` - Mark attendance (teacher only)
+- `GET /api/attendance?date=YYYY-MM-DD` - Get attendance records ‚Üí {attendance: [...]}
+- `POST /api/attendance` - Mark attendance (teacher only) ‚Üí {ok: true}
 
-### Scores
-- `GET /api/scores?studentId=...&className=...` - Get scores
-- `POST /api/scores` - Add score (teacher only)
+### Scores (Standardized Phase 2.2 ‚úÖ)
+- `GET /api/scores?studentId=...&className=...` - Get scores (standardized) ‚Üí {scores: [...]}
+- `POST /api/scores` - Add score (teacher only) ‚Üí {score: {...}}
+
+### Admin (NEW Phase 1.1)
+- `GET /api/admin/dashboard` - Dashboard stats (admin only) ‚Üí {stats: {...}, users: [...]}
+- `GET /api/admin/users` - List all users (admin only) ‚Üí {users: [...]}
+- `POST /api/admin/users` - Create user (admin only) ‚Üí {user: {...}}
+- `DELETE /api/admin/users/:id` - Delete user (admin only) ‚Üí {ok: true}
+
+### Quiz, Meeting, Instruction, Event, Enquiry, Announcement
+- Various CRUD endpoints following same standardized format
+- Role-based access control enforced
 
 ---
 
-## Authentication Flow
-
-1. User logs in at `/login` page
-2. Frontend sends `POST /api/auth/login` with email, password, role
-3. Backend verifies credentials and returns JWT token + user data
-4. Frontend stores token in localStorage
-5. For subsequent requests, token sent in `Authorization: Bearer <token>` header
-6. Auth middleware verifies token and attaches user to request object
-7. Controllers can check `req.user` and `req.user.role`
+## Authentication Flow (Updated Phase 1.2)
 
 ---
 
@@ -218,57 +370,96 @@ VITE v7.3.1 ready in 123 ms
 
 ---
 
-## Database Schema
+## Database Schema (Updated Phase 1.5 & 2.3)
 
-### Users Collection
+### Users Collection (Phase 1.5 ‚úÖ - Per-role email uniqueness)
 ```javascript
 {
   _id: ObjectId,
   name: String,
-  email: String (unique),
-  passwordHash: String,
-  role: "teacher" | "parent" | "student",
+  email: String,                        // Unique per role (compound index)
+  passwordHash: String,                 // bcryptjs hashed (10 rounds)
+  role: "teacher" | "parent" | "student" | "admin",  // 4 roles
   avatar: String (optional),
   meta: Map<String, String>,
   createdAt: Date,
   updatedAt: Date
 }
+
+// Unique compound index (Phase 1.5)
+userSchema.index({email: 1, role: 1}, {unique: true});
 ```
 
-### Students Collection
+### Students Collection (Phase 2.3 ‚úÖ - Class assignment)
 ```javascript
 {
   _id: ObjectId,
   name: String,
   roll: String,
-  className: String,
+  className: String,                    // Class assignment for filtering (Phase 2.3)
   parentName: String,
   studentEmail: String,
   parentEmail: String,
-  studentUserId: ObjectId (ref: User),
-  parentUserId: ObjectId (ref: User),
+  studentUserId: ObjectId (ref: User), // Link to student user
+  parentUserId: ObjectId (ref: User),   // Link to parent user
   createdByTeacherId: ObjectId (ref: User),
   createdAt: Date,
   updatedAt: Date
 }
+
+// Compound index (Phase 3.2 pending)
+studentSchema.index({className: 1, studentUserId: 1});
 ```
 
-### Homework Collection
+### Homework Collection (Phase 2.3 ‚úÖ - Class-based filtering)
 ```javascript
 {
   _id: ObjectId,
   subject: String,
   title: String,
   description: String,
-  dueDate: String,
-  className: String (optional),
+  dueDate: String,                      // ISO 8601 format
+  className: String,                    // Class assignment (Phase 2.3)
   createdByTeacherId: ObjectId (ref: User),
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// Compound index for class filtering (Phase 3.2 pending)
+homeworkSchema.index({className: 1, createdByTeacherId: 1});
+```
+
+### HomeworkStatus Collection
+```javascript
+{
+  _id: ObjectId,
+  studentId: ObjectId (ref: User),
+  homeworkId: ObjectId (ref: Homework),
+  status: "NotStarted" | "InProgress" | "Completed",
+  submissionDate: Date (optional),
+  feedback: String (optional),
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// Compound unique index
+statusSchema.index({studentId: 1, homeworkId: 1}, {unique: true});
+```
+
+### Attendance Collection (Future Phase 3.2 indexing)
+```javascript
+{
+  _id: ObjectId,
+  studentId: ObjectId (ref: User),
+  date: Date (ISO 8601),
+  status: "present" | "absent" | "late",
+  markedByTeacherId: ObjectId (ref: User),
   createdAt: Date,
   updatedAt: Date
 }
 ```
 
-Similar structures for HomeworkStatus, Attendance, Score collections.
+Similar schemas for: Score, Quiz, Meeting, Instruction, Event, Announcement, Notification, Enquiry
 
 ---
 

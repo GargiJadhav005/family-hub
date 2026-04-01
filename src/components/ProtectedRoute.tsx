@@ -15,6 +15,7 @@ export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
       teacher: '/teacher',
       parent: '/parent',
       student: '/student',
+      admin: '/admin',
     };
     return <Navigate to={redirectMap[user?.role || 'student']} replace />;
   }

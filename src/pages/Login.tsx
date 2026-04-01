@@ -12,12 +12,14 @@ const roleTabs: { role: UserRole; label: string }[] = [
   { role: 'teacher', label: 'शिक्षक' },
   { role: 'parent', label: 'पालक' },
   { role: 'student', label: 'विद्यार्थी' },
+  { role: 'admin', label: 'व्यवस्थापक' },
 ];
 
 const demoMap: Record<UserRole, { email: string; password: string }> = {
   teacher: { email: 'teacher@school.edu', password: 'teacher123' },
   parent: { email: 'parent@school.edu', password: 'parent123' },
   student: { email: 'student@school.edu', password: 'student123' },
+  admin: { email: 'admin@school.edu', password: 'admin123' },
 };
 
 export default function Login() {
@@ -45,6 +47,7 @@ export default function Login() {
         teacher: '/teacher',
         parent: '/parent',
         student: '/student',
+        admin: '/admin',
       };
       navigate(redirectMap[role]);
     } else {

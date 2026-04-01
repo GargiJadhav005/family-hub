@@ -1,53 +1,90 @@
-# Setup & Run Instructions
+# Family Hub - Complete Setup Guide
 
-## ? What's Been Done
-
-### Backend Architecture (Complete)
-? Express.js server with MVC pattern
-? 6 Mongoose models (User, Student, Homework, HomeworkStatus, Attendance, Score)
-? 6 Controllers with business logic
-? 6 Route files with proper endpoint definitions
-? Auth middleware with JWT verification
-? Utility functions for DB, auth, and password hashing
-? Full error handling and validation with Zod
-? All 141 npm dependencies installed
-
-### Models Created
-- User (teacher, parent, student roles)
-- Student (with references to users)
-- Homework (assignments)
-- HomeworkStatus (completion tracking)
-- Attendance (daily attendance records)
-- Score (test scores and grades)
-
-### Controllers Created
-- authController ? login, getMe
-- studentController ? list students, get by ID
-- teacherController ? enroll students
-- homeworkController ? create, list, update status
-- attendanceController ? mark and list attendance
-- scoresController ? add and list scores
-
-### Frontend Updates
-? Updated AuthContext to use Express backend
-? Created apiCall utility for consistent API calls
-? Configured environment variable for backend URL
-
----
-
-## ?? How to Run
+## Quick Start (5 minutes)
 
 ### Prerequisites
-- Node.js 18+ installed
-- MongoDB connection configured (in backend/.env - already set)
-- Two terminal windows
+- Node.js 18+ and npm (or use `nvm`)
+- MongoDB 4.0+ (local or cloud instance like MongoDB Atlas)
+- Git
 
-### Step 1: Start the Backend Server
+### 1. Clone & Install
 
-```powershell
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd family-hub
+
+# Install frontend dependencies
+npm install
+
+# Install backend dependencies
+cd backend
+npm install
+cd ..
+```
+
+### 2. Configure Environment
+
+**Backend Setup**:
+```bash
+cd backend
+
+# Copy template to .env
+cp .env.example .env
+
+# Edit .env with your values
+# REQUIRED: Set JWT_SECRET (use a strong random string, min 32 characters)
+# REQUIRED: Set MONGODB_URI (local or MongoDB Atlas connection string)
+nano .env  # or use your preferred editor
+
+cd ..
+```
+
+**Example backend/.env**:
+```
+JWT_SECRET=your-super-secret-key-change-this-in-production-min-32-chars
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DB_NAME=family_hub
+PORT=5000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+JWT_EXPIRES_IN=7d
+```
+
+**Frontend Setup**:
+```bash
+# Copy template
+cp .env.example .env.local
+
+# Optional: Edit .env.local if using custom API URL
+# Default: http://localhost:5000/api
+```
+
+### 3: Start Development Servers
+
+**Terminal 1 - Backend**:
+```bash
 cd backend
 npm run dev
+# âœ… Server running on http://localhost:5000
 ```
+
+**Terminal 2 - Frontend**:
+```bash
+npm run dev
+# âœ… App running on http://localhost:5173
+```
+
+### 4: Login & Explore
+
+Visit `http://localhost:5173` with test credentials:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Teacher | teacher@school.edu | teacher123 |
+| Parent | parent@school.edu | parent123 |
+| Student | student@school.edu | student123 |
+| Admin | admin@school.edu | admin123 |
 
 **Expected output:**
 ```
@@ -133,12 +170,12 @@ curl -H "Authorization: Bearer TOKEN" \
 ```
 backend/
 +-- src/
-¦   +-- models/         (6 files) - Database schemas
-¦   +-- controllers/    (6 files) - Business logic
-¦   +-- routes/         (6 files) - HTTP endpoints
-¦   +-- middleware/     (1 file)  - Auth middleware
-¦   +-- utils/          (2 files) - DB & auth helpers
-¦   +-- server.ts       - Main Express app
+ï¿½   +-- models/         (6 files) - Database schemas
+ï¿½   +-- controllers/    (6 files) - Business logic
+ï¿½   +-- routes/         (6 files) - HTTP endpoints
+ï¿½   +-- middleware/     (1 file)  - Auth middleware
+ï¿½   +-- utils/          (2 files) - DB & auth helpers
+ï¿½   +-- server.ts       - Main Express app
 +-- .env                - MongoDB and JWT config
 +-- tsconfig.json       - TypeScript config
 +-- package.json        - Dependencies

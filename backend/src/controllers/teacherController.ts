@@ -83,17 +83,19 @@ export async function enrollStudent(req: AuthRequest, res: Response): Promise<vo
     await student.save();
 
     res.status(201).json({
-      id,
-      name,
-      roll: rollNum,
-      class: className,
-      parentName,
-      studentEmail,
-      studentPassword: studentPasswordPlain,
-      parentEmail,
-      parentPassword: parentPasswordPlain,
-      studentUser: toClientUser(studentUser),
-      parentUser: toClientUser(parentUser),
+      student: {
+        id,
+        name,
+        roll: rollNum,
+        class: className,
+        parentName,
+        studentEmail,
+        studentPassword: studentPasswordPlain,
+        parentEmail,
+        parentPassword: parentPasswordPlain,
+        studentUser: toClientUser(studentUser),
+        parentUser: toClientUser(parentUser),
+      }
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {

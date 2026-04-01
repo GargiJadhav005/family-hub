@@ -2,6 +2,7 @@ import "dotenv/config";
 import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { connectDB } from "./utils/db";
+import { seedDemoUsers } from "./scripts/seedUsers";
 
 // Import routes
 import authRoutes from "./routes/authRoutes";
@@ -16,6 +17,7 @@ import instructionRoutes from "./routes/instructionRoutes";
 import quizRoutes from "./routes/quizRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import enquiryRoutes from "./routes/enquiryRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 
 
 const app: Express = express();
@@ -53,6 +55,7 @@ app.use("/api/instructions", instructionRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/enquiry", enquiryRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 
 // 404 handler
@@ -71,7 +74,25 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 // Start server
 async function start() {
   try {
+    // Validate environment variables
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ FATAL: JWT_SECRET environment variable is not set");
+      console.error("ℹ️  Please set JWT_SECRET in your .env file");
+      process.exit(1);
+    }
+
+    if (!process.env.MONGODB_URI) {
+      console.error("❌ FATAL: MONGODB_URI environment variable is not set");
+      console.error("ℹ️  Please set MONGODB_URI in your .env file");
+      process.exit(1);
+    }
+
     await connectDB();
+    console.log("✓ Connected to MongoDB\n");
+
+    // 🌱 Seed demo users on startup
+    await seedDemoUsers();
+
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`\n✅ Server running at http://localhost:${PORT}`);
       console.log(`🔗 CORS enabled for ${process.env.FRONTEND_URL || "http://localhost:5173"}\n`);

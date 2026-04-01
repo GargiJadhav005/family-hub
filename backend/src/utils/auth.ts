@@ -8,7 +8,10 @@ export interface AuthTokenPayload {
 }
 
 export function signToken(userId: string, role: UserRole): string {
-  const secret = process.env.JWT_SECRET || "dev-secret-change-me";
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
   const expiresIn = (process.env.JWT_EXPIRES_IN || "7d") as jwt.SignOptions["expiresIn"];
 
   const payload: AuthTokenPayload = {
@@ -21,7 +24,11 @@ export function signToken(userId: string, role: UserRole): string {
 
 export function verifyToken(token: string): AuthTokenPayload | null {
   try {
-    const secret = process.env.JWT_SECRET || "dev-secret-change-me";
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error("JWT_SECRET is not configured");
+      return null;
+    }
     const decoded = jwt.verify(token, secret) as AuthTokenPayload;
     return decoded;
   } catch {

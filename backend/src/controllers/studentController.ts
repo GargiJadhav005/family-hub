@@ -49,7 +49,7 @@ export async function getStudentById(req: AuthRequest, res: Response): Promise<v
       parentEmail: student.parentEmail,
     };
 
-    res.json(item);
+    res.json({ student: item });
   } catch (err) {
     console.error("GetStudentById error:", err);
     res.status(500).json({ error: "Internal server error" });

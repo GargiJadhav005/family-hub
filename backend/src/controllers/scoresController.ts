@@ -81,13 +81,15 @@ export async function addScore(req: AuthRequest, res: Response): Promise<void> {
     await score.save();
 
     res.status(201).json({
-      id: score._id.toString(),
-      studentId,
-      subject,
-      testName,
-      scorePercent,
-      grade,
-      date,
+      score: {
+        id: score._id.toString(),
+        studentId,
+        subject,
+        testName,
+        scorePercent,
+        grade,
+        date,
+      }
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
