@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Users, Calendar, FileText, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/contexts/AuthContext';
 import { apiCall } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -23,6 +24,8 @@ interface Meeting {
 }
 
 export default function TeacherDashboard() {
+  const { user } = useAuth();
+
   const { data: studentsData } = useQuery({
     queryKey: ['teacher-students'],
     queryFn: () => apiCall('/students'),
@@ -98,7 +101,7 @@ export default function TeacherDashboard() {
         <h1 className="text-2xl md:text-3xl font-bold">शिक्षक डॅशबोर्ड</h1>
         <p className="text-sm text-muted-foreground">
           आजचा दिनांक: {new Date().toLocaleDateString('mr-IN')} •{' '}
-          <span className="text-primary font-medium">इयत्ता ४-ब सत्र सुरू आहे</span>
+          <span className="text-primary font-medium">{user?.meta?.class || 'आपला वर्ग'} सत्र सुरू आहे</span>
         </p>
       </div>
 

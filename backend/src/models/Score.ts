@@ -4,7 +4,7 @@ const scoreSchema = new mongoose.Schema(
   {
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Student",
       required: true,
     },
     subject: {
@@ -34,5 +34,7 @@ const scoreSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+scoreSchema.index({ studentId: 1, date: -1 });
 
 export const Score = mongoose.model("Score", scoreSchema);

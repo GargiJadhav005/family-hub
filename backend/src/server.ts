@@ -18,6 +18,7 @@ import quizRoutes from "./routes/quizRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import enquiryRoutes from "./routes/enquiryRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
+import reportCardRoutes from "./routes/reportCardRoutes";
 
 
 const app: Express = express();
@@ -56,6 +57,7 @@ app.use("/api/quizzes", quizRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/enquiry", enquiryRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/report-cards", reportCardRoutes);
 
 
 // 404 handler

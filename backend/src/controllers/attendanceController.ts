@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Attendance } from "../models";
+import { Attendance, Student } from "../models";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 
@@ -13,16 +13,40 @@ const AttendanceBodySchema = z.object({
   records: z.array(AttendanceRecordSchema),
 });
 
+/**
+ * GET /api/attendance?date=YYYY-MM-DD
+ * Teacher: returns attendance for their class only
+ * Parent: returns attendance for their child only
+ */
 export async function getAttendance(req: AuthRequest, res: Response): Promise<void> {
   try {
     const date = (req.query.date as string) || new Date().toISOString().slice(0, 10);
+    const user = req.user;
+    let filter: any = { date };
 
-    const records = await Attendance.find({ date }).populate("studentId", "name email");
+    if (user.role === "teacher") {
+      const teacherClass = user.meta?.get?.("class") ?? user.meta?.class;
+      if (teacherClass) {
+        filter.className = teacherClass;
+      }
+    } else if (user.role === "parent") {
+      const children = await Student.find({ parentUserId: user._id }).select("_id");
+      filter.studentId = { $in: children.map((c) => c._id) };
+    } else if (user.role === "student") {
+      const student = await Student.findOne({ studentUserId: user._id });
+      if (student) {
+        filter.studentId = student._id;
+      }
+    }
+
+    const records = await Attendance.find(filter).populate("studentId", "name roll className");
 
     const items = records.map((a: any) => ({
       id: a._id.toString(),
-      studentId: a.studentId._id.toString(),
-      studentName: a.studentId.name,
+      studentId: a.studentId?._id?.toString(),
+      studentName: a.studentId?.name,
+      studentRoll: a.studentId?.roll,
+      className: a.className,
       date: a.date,
       status: a.status,
     }));
@@ -34,6 +58,12 @@ export async function getAttendance(req: AuthRequest, res: Response): Promise<vo
   }
 }
 
+/**
+ * POST /api/attendance
+ * Teacher only: mark attendance for students in their class
+ * Body: { date: "YYYY-MM-DD", records: [{ studentId, status }] }
+ * studentId here is Student._id (not User._id)
+ */
 export async function markAttendance(req: AuthRequest, res: Response): Promise<void> {
   try {
     if (req.user.role !== "teacher") {
@@ -44,15 +74,25 @@ export async function markAttendance(req: AuthRequest, res: Response): Promise<v
     const body = AttendanceBodySchema.parse(req.body);
     const { date, records } = body;
 
-    // Validate that all student IDs exist
-    const { User } = await import("../models");
+    const teacherClass = req.user.meta?.get?.("class") ?? req.user.meta?.class;
+    if (!teacherClass) {
+      res.status(400).json({ error: "Teacher class assignment not found" });
+      return;
+    }
+
+    // Validate all students belong to teacher's class
     const studentIds = records.map((r) => r.studentId);
-    const existingStudents = await User.countDocuments({
+    const validStudents = await Student.find({
       _id: { $in: studentIds },
+      className: teacherClass,
     });
 
-    if (existingStudents !== studentIds.length) {
-      res.status(400).json({ error: "One or more student IDs do not exist" });
+    if (validStudents.length !== studentIds.length) {
+      res.status(400).json({
+        error: "Some students do not belong to your class",
+        expected: studentIds.length,
+        found: validStudents.length,
+      });
       return;
     }
 
@@ -62,6 +102,7 @@ export async function markAttendance(req: AuthRequest, res: Response): Promise<v
           { studentId: r.studentId, date },
           {
             studentId: r.studentId,
+            className: teacherClass,
             date,
             status: r.status,
             markedByTeacherId: req.user._id,
@@ -71,7 +112,7 @@ export async function markAttendance(req: AuthRequest, res: Response): Promise<v
       )
     );
 
-    res.json({ 
+    res.json({
       ok: true,
       message: `Attendance marked for ${results.length} students on ${date}`,
       recordsCount: results.length,

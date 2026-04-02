@@ -9,10 +9,10 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
 export default function TeacherEnroll() {
-  const { enrolledStudents, enrollStudent } = useAuth();
+  const { enrolledStudents, enrollStudent, user } = useAuth();
   const [name, setName] = useState('');
   const [parentName, setParentName] = useState('');
-  const [className, setClassName] = useState('');
+  const [className, setClassName] = useState(user?.meta?.class || '');
   const [lastEnrolled, setLastEnrolled] = useState<{
     name: string;
     studentEmail: string;
@@ -68,7 +68,7 @@ export default function TeacherEnroll() {
             </div>
             <div className="space-y-2">
               <Label>इयत्ता</Label>
-              <Select value={className} onValueChange={setClassName}>
+              <Select value={className} onValueChange={setClassName} disabled={!!user?.meta?.class}>
                 <SelectTrigger><SelectValue placeholder="इयत्ता निवडा" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="इयत्ता १-अ">इयत्ता १-अ</SelectItem>

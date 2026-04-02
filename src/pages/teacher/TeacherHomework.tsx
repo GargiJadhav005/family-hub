@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BookOpen, Plus, Clock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiCall } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Homework {
   id: string;
@@ -19,12 +20,13 @@ interface Homework {
 }
 
 export default function TeacherHomework() {
+  const { user } = useAuth();
   const [homeworkList, setHomeworkList] = useState<Homework[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [subject, setSubject] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [className, setClassName] = useState('');
+  const [className, setClassName] = useState(user?.meta?.class || '');
   const [dueDate, setDueDate] = useState('');
 
   useEffect(() => {
@@ -110,7 +112,7 @@ export default function TeacherHomework() {
               </div>
               <div className="space-y-2">
                 <Label>इयत्ता</Label>
-                <Select value={className} onValueChange={setClassName}>
+                <Select value={className} onValueChange={setClassName} disabled={!!user?.meta?.class}>
                   <SelectTrigger><SelectValue placeholder="इयत्ता निवडा" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="इयत्ता १-अ">इयत्ता १-अ</SelectItem>

@@ -10,10 +10,6 @@ const EnrollSchema = z.object({
   className: z.string().min(1),
 });
 
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
-
 function generatePassword(): string {
   return "Pass" + Math.floor(1000 + Math.random() * 9000);
 }
@@ -28,14 +24,17 @@ export async function enrollStudent(req: AuthRequest, res: Response): Promise<vo
     const body = EnrollSchema.parse(req.body);
     const { name, parentName, className } = body;
 
-    const id = "STU" + generateId();
-    const rollNum = "01";
+    // Auto-generate sequential roll number for the class
+    const existingCount = await Student.countDocuments({ className });
+    const rollNum = String(existingCount + 1).padStart(2, "0");
+
     const baseEmail = name
       .toLowerCase()
       .replace(/\s/g, ".")
       .replace(/[^a-z.]/g, "");
-    const studentEmail = `${baseEmail}@school.edu`;
-    const parentEmail = `parent.${baseEmail}@school.edu`;
+    const timestamp = Date.now().toString(36).slice(-4);
+    const studentEmail = `${baseEmail}.${timestamp}@school.edu`;
+    const parentEmail = `parent.${baseEmail}.${timestamp}@school.edu`;
 
     const studentPasswordPlain = generatePassword();
     const parentPasswordPlain = generatePassword();
@@ -84,7 +83,7 @@ export async function enrollStudent(req: AuthRequest, res: Response): Promise<vo
 
     res.status(201).json({
       student: {
-        id,
+        id: student._id.toString(),
         name,
         roll: rollNum,
         class: className,

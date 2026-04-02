@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle, AlertCircle, Save, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AttendanceStudent {
   id: string;
@@ -12,6 +13,7 @@ interface AttendanceStudent {
 }
 
 export default function TeacherAttendance() {
+  const { user } = useAuth();
   const [students, setStudents] = useState<AttendanceStudent[]>([]);
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export default function TeacherAttendance() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">विद्यार्थी उपस्थिती</h1>
-          <p className="text-sm text-muted-foreground">आजची तारीख: २८ ऑक्टोबर २०२४ • इयत्ता ४-ब</p>
+          <p className="text-sm text-muted-foreground">आजची तारीख: {new Date().toLocaleDateString('mr-IN')} • {user?.meta?.class || 'आपला वर्ग'}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => markAll('present')}>सर्व हजर</Button>

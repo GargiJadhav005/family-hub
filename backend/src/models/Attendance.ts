@@ -6,7 +6,11 @@ const attendanceSchema = new mongoose.Schema(
   {
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Student",
+      required: true,
+    },
+    className: {
+      type: String,
       required: true,
     },
     date: {
@@ -32,5 +36,6 @@ const attendanceSchema = new mongoose.Schema(
 );
 
 attendanceSchema.index({ studentId: 1, date: 1 }, { unique: true });
+attendanceSchema.index({ className: 1, date: 1 });
 
 export const Attendance = mongoose.model("Attendance", attendanceSchema);

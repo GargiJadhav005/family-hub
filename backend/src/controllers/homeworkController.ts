@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Homework, HomeworkStatus } from "../models";
+import { Homework, HomeworkStatus, Student } from "../models";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 
@@ -18,10 +18,16 @@ export async function getHomework(req: AuthRequest, res: Response): Promise<void
     if (req.user.role === "teacher") {
       query.createdByTeacherId = req.user._id;
     } else if (req.user.role === "student") {
-      // Filter by the student's class (stored in user.meta)
       const className = req.user.meta?.get?.("class") || req.user.meta?.class;
       if (className) {
         query.className = className;
+      }
+    } else if (req.user.role === "parent") {
+      // Get children's classes
+      const children = await Student.find({ parentUserId: req.user._id });
+      if (children.length > 0) {
+        const classNames = [...new Set(children.map((c) => c.className))];
+        query.className = { $in: classNames };
       }
     }
 
@@ -101,8 +107,17 @@ export async function updateHomeworkStatus(req: AuthRequest, res: Response): Pro
       return;
     }
 
-    const finalStudentId =
-      req.user.role === "student" ? req.user._id.toString() : studentId;
+    let finalStudentId = studentId;
+
+    // For students, auto-resolve to their Student._id
+    if (req.user.role === "student") {
+      const studentDoc = await Student.findOne({ studentUserId: req.user._id });
+      if (!studentDoc) {
+        res.status(404).json({ error: "Student record not found" });
+        return;
+      }
+      finalStudentId = studentDoc._id.toString();
+    }
 
     if (!finalStudentId) {
       res.status(400).json({ error: "studentId is required" });
@@ -128,9 +143,8 @@ export async function updateHomeworkStatus(req: AuthRequest, res: Response): Pro
 }
 
 /**
- * Get all homework for a student with completion status
- * Only for student role - returns homework for their class with status tracking
  * GET /api/homework/student/all
+ * Returns homework for student's class with completion status
  */
 export async function getStudentAllHomeworkWithStatus(req: AuthRequest, res: Response): Promise<void> {
   try {
@@ -139,24 +153,25 @@ export async function getStudentAllHomeworkWithStatus(req: AuthRequest, res: Res
       return;
     }
 
-    const studentId = req.user._id;
-    const className = req.user.meta?.get?.("class") || req.user.meta?.class;
-
-    if (!className) {
-      res.status(400).json({ error: "Student class assignment not found" });
+    // Resolve Student._id from User._id
+    const studentDoc = await Student.findOne({ studentUserId: req.user._id });
+    if (!studentDoc) {
+      res.status(404).json({ error: "Student record not found" });
       return;
     }
+
+    const className = studentDoc.className;
 
     // Get all homework for student's class
     const homeworkList = await Homework.find({ className })
       .sort({ createdAt: -1 })
       .populate("createdByTeacherId", "name");
 
-    // Get student's status for each homework
+    // Get student's status for each homework (using Student._id)
     const homeworkWithStatus = await Promise.all(
       homeworkList.map(async (hw: any) => {
         const status = await HomeworkStatus.findOne({
-          studentId,
+          studentId: studentDoc._id,
           homeworkId: hw._id,
         });
 

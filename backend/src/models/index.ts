@@ -30,3 +30,5 @@ export type { AnnouncementAudience } from "./Announcement";
 
 export { Notification } from "./Notification";
 export type { NotificationEvent } from "./Notification";
+
+export { ReportCard } from "./ReportCard";
