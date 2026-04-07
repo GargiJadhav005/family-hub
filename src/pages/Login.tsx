@@ -4,15 +4,15 @@ import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
-const roleTabs: { role: UserRole; label: string }[] = [
-  { role: 'teacher', label: 'शिक्षक' },
-  { role: 'parent', label: 'पालक' },
-  { role: 'student', label: 'विद्यार्थी' },
-  { role: 'admin', label: 'व्यवस्थापक' },
+const roleTabs: { role: UserRole; label: string; emoji: string }[] = [
+  { role: 'teacher', label: 'शिक्षक', emoji: '👨‍🏫' },
+  { role: 'parent', label: 'पालक', emoji: '👪' },
+  { role: 'student', label: 'विद्यार्थी', emoji: '🎒' },
+  { role: 'admin', label: 'व्यवस्थापक', emoji: '⚙️' },
 ];
 
 export default function Login() {
@@ -49,51 +49,52 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/40 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background px-4">
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <Link to="/" className="inline-flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <GraduationCap className="w-6 h-6 text-primary" />
+            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-lg">
+              <GraduationCap className="w-7 h-7 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">
+              <h1 className="text-xl font-bold tracking-tight">
                 वैनतेय प्राथमिक विद्या मंदिर
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 शालेय पोर्टलमध्ये लॉगिन करा
               </p>
             </div>
           </Link>
         </div>
 
-        <div className="bg-card border border-border/60 rounded-2xl shadow-sm p-8 backdrop-blur">
+        <div className="bg-card border border-border/60 rounded-2xl shadow-sm p-7 backdrop-blur">
           {/* Role Toggle */}
-          <div className="flex mb-6 rounded-xl bg-muted p-1">
+          <div className="grid grid-cols-4 gap-1.5 mb-6">
             {roleTabs.map((tab) => (
               <button
                 key={tab.role}
                 type="button"
                 onClick={() => setRole(tab.role)}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
+                className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-xs font-medium transition-all ${
                   role === tab.role
-                    ? "bg-background shadow-sm"
-                    : "text-muted-foreground"
+                    ? "bg-primary/10 text-primary border border-primary/20 shadow-sm"
+                    : "text-muted-foreground hover:bg-muted border border-transparent"
                 }`}
               >
+                <span className="text-base">{tab.emoji}</span>
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label>ईमेल</Label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">ईमेल</Label>
               <Input
                 type="email"
                 value={email}
@@ -104,8 +105,8 @@ export default function Login() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>पासवर्ड</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs">पासवर्ड</Label>
               <Input
                 type="password"
                 value={password}
@@ -116,8 +117,17 @@ export default function Login() {
               />
             </div>
 
-            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading}>
-              {loading ? "लॉगिन होत आहे..." : "लॉगिन करा"}
+            <Button type="submit" className="w-full h-11 rounded-xl gap-2" disabled={loading}>
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  लॉगिन होत आहे...
+                </span>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" /> लॉगिन करा
+                </>
+              )}
             </Button>
           </form>
         </div>

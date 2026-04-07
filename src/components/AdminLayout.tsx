@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -18,11 +19,11 @@ import { NavLink } from "@/components/NavLink";
 import { motion, AnimatePresence } from "framer-motion";
 
 const adminLinks = [
-  { title: "व्यवस्थापक डॅशबोर्ड", to: "/admin", icon: LayoutDashboard },
-  { title: "सर्व वापरकर्ते", to: "/admin/users", icon: Users },
-  { title: "प्रश्न", to: "/admin/enquiries", icon: HelpCircle },
-  { title: "घोषणाएं", to: "/admin/announcements", icon: Megaphone },
-  { title: "संदेश", to: "/admin/messages", icon: Mail },
+  { title: "व्यवस्थापक डॅशबोर्ड", url: "/admin", icon: LayoutDashboard },
+  { title: "सर्व वापरकर्ते", url: "/admin/users", icon: Users },
+  { title: "प्रश्न", url: "/admin/enquiries", icon: HelpCircle },
+  { title: "घोषणा", url: "/admin/announcements", icon: Megaphone },
+  { title: "संदेश", url: "/admin/messages", icon: Mail },
 ];
 
 export default function AdminLayout() {
@@ -46,29 +47,30 @@ export default function AdminLayout() {
               animate={{ x: 0 }}
               exit={{ x: -260 }}
               transition={{ type: "tween" }}
-              className="fixed top-0 left-0 h-full w-64 bg-white border-r z-50 p-6"
+              className="fixed top-0 left-0 h-full w-64 bg-card border-r border-border z-50 p-5"
             >
               <div className="flex items-center justify-between mb-8">
                 <Link to="/admin" className="flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-primary" />
-                  <span className="font-semibold text-sm">व्यवस्थापन</span>
+                  <span className="font-semibold text-sm">वैनतेय व्यवस्थापन</span>
                 </Link>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="lg:hidden p-1 hover:bg-gray-100 rounded"
-                >
+                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
                   <X className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
               <nav className="space-y-1">
-                {adminLinks.map((link) => (
+                {adminLinks.map((item) => (
                   <NavLink
-                    key={link.to}
-                    to={link.to}
-                    label={link.title}
-                    icon={link.icon}
+                    key={item.url}
+                    to={item.url}
+                    end={item.url === "/admin"}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-muted transition"
+                    activeClassName="bg-primary/10 text-primary font-medium"
                     onClick={() => setSidebarOpen(false)}
-                  />
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.title}
+                  </NavLink>
                 ))}
               </nav>
             </motion.aside>
@@ -76,63 +78,35 @@ export default function AdminLayout() {
         )}
       </AnimatePresence>
 
-      <aside className="hidden lg:flex w-64 bg-white border-r border-border/60 flex-col">
-        <div className="p-6 border-b">
-          <Link to="/admin" className="flex items-center gap-2">
-            <GraduationCap className="w-6 h-6 text-primary" />
-            <div>
-              <h2 className="font-semibold">व्यवस्थापन</h2>
-              <p className="text-xs text-muted-foreground">Family Hub</p>
-            </div>
-          </Link>
-        </div>
-        <nav className="flex-1 p-6 space-y-1">
-          {adminLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              label={link.title}
-              icon={link.icon}
-            />
-          ))}
-        </nav>
-      </aside>
-
       <div className="flex-1 flex flex-col">
-        <header className="bg-white border-b border-border/60 sticky top-0 z-30">
-          <div className="flex items-center justify-between h-16 px-6">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded"
-            >
+        <header className="h-14 flex items-center justify-between px-6 bg-card border-b border-border sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
               <Menu className="w-5 h-5" />
-            </button>
-
-            <div className="flex-1" />
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">व्यवस्थापक</p>
-                </div>
+            </Button>
+            <h1 className="text-sm font-semibold text-muted-foreground hidden sm:block">
+              वैनतेय प्राथमिक विद्या मंदिर
+            </h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="hidden sm:block text-right">
+                <p className="text-xs font-medium">{user?.name}</p>
+                <p className="text-[10px] text-muted-foreground">व्यवस्थापक</p>
               </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-                className="gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">बाहेर पडा</span>
-              </Button>
             </div>
+            <Button variant="ghost" size="icon" onClick={logout}>
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </header>
 
