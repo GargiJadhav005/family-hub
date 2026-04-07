@@ -4,6 +4,8 @@ import { CheckCircle2, Star, Bell, Calendar, MessageSquare } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiCall } from '@/lib/api';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 export default function ParentDashboard() {
   const { user } = useAuth();
@@ -11,25 +13,21 @@ export default function ParentDashboard() {
   const { data: instructionsData } = useQuery({
     queryKey: ['parent-instructions'],
     queryFn: () => apiCall('/instructions'),
-    enabled: !!user,
   });
 
   const { data: meetingsData } = useQuery({
     queryKey: ['parent-meetings'],
     queryFn: () => apiCall('/meetings'),
-    enabled: !!user,
   });
 
   const { data: noticesData } = useQuery({
     queryKey: ['events-notices'],
     queryFn: () => apiCall('/events?type=notice&audience=parents'),
-    enabled: !!user,
   });
 
   const { data: eventsData } = useQuery({
     queryKey: ['events-upcoming'],
     queryFn: () => apiCall('/events?type=event'),
-    enabled: !!user,
   });
 
   const instructions = instructionsData?.instructions ?? [];
@@ -41,12 +39,7 @@ export default function ParentDashboard() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Child profile */}
-      <motion.div
-        className="flex flex-col sm:flex-row items-start sm:items-center gap-4"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div className="flex flex-col sm:flex-row items-start sm:items-center gap-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <Avatar className="w-16 h-16">
           <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
             {user?.meta?.child?.charAt(0) || 'आ'}
@@ -56,8 +49,12 @@ export default function ParentDashboard() {
           <h1 className="text-2xl font-bold">{user?.meta?.child || 'विद्यार्थी'}</h1>
           <span className="text-sm text-primary font-medium">{user?.meta?.class || ''}</span>
           <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-success" /> उपस्थिती दर्जा</span>
-            <span className="flex items-center gap-1"><Star className="w-3 h-3 text-warning" /> प्रगती पाहा</span>
+            <Link to="/parent/progress" className="flex items-center gap-1 hover:text-primary transition">
+              <Star className="w-3 h-3 text-warning" /> प्रगती पहा
+            </Link>
+            <Link to="/parent/homework" className="flex items-center gap-1 hover:text-primary transition">
+              <CheckCircle2 className="w-3 h-3 text-success" /> गृहपाठ
+            </Link>
           </div>
         </div>
       </motion.div>
@@ -94,7 +91,6 @@ export default function ParentDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Teacher Instructions + PTM */}
         <div className="lg:col-span-2 space-y-4">
           <div className="portal-card p-5">
             <h3 className="font-bold mb-3 flex items-center gap-2">
@@ -112,14 +108,13 @@ export default function ParentDashboard() {
                         {new Date(inst.createdAt).toLocaleDateString('mr-IN')}
                       </span>
                     </div>
-                    <p className="text-sm text-foreground italic leading-relaxed">{inst.message}</p>
+                    <p className="text-sm text-foreground leading-relaxed">{inst.message}</p>
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          {/* PTM Alerts */}
           <div className="portal-card p-5">
             <h3 className="font-bold mb-3 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-primary" /> पालक-शिक्षक सभा (PTM)
@@ -139,10 +134,7 @@ export default function ParentDashboard() {
                         {new Date(m.date).toLocaleDateString('mr-IN')} • {m.timeLabel}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{m.mode}</span>
-                      <span className="text-xs text-success">{m.status}</span>
-                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{m.mode}</span>
                   </div>
                 ))
               )}
@@ -150,7 +142,6 @@ export default function ParentDashboard() {
           </div>
         </div>
 
-        {/* Right: Notices + Events */}
         <div className="space-y-4">
           <div className="portal-card p-5">
             <h3 className="font-bold text-sm flex items-center gap-2 mb-3">🔔 महत्त्वाच्या सूचना</h3>
@@ -161,7 +152,7 @@ export default function ParentDashboard() {
                 notices.slice(0, 3).map((n: any) => (
                   <div key={n._id} className="flex gap-3">
                     <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
-                      <span className="text-[10px] text-primary font-medium leading-tight text-center whitespace-pre-line">
+                      <span className="text-[10px] text-primary font-medium leading-tight text-center">
                         {new Date(n.date).toLocaleDateString('mr-IN', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>

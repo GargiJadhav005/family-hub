@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, XCircle, AlertCircle, Save, Filter } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiCall } from '@/lib/api';
 
 interface AttendanceStudent {
   id: string;
@@ -19,25 +19,16 @@ export default function TeacherAttendance() {
   useEffect(() => {
     const loadStudents = async () => {
       try {
-        const token = localStorage.getItem('auth_token');
-        if (!token) return;
-        const res = await fetch('/api/students', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await apiCall('/students');
         if (Array.isArray(data.students)) {
-          const mapped: AttendanceStudent[] = data.students.map((s: any, index: number) => ({
+          setStudents(data.students.map((s: any, i: number) => ({
             id: s.id,
             name: s.name,
-            roll: s.roll || String(index + 1).padStart(2, '0'),
+            roll: s.roll || String(i + 1).padStart(2, '0'),
             status: 'present',
-          }));
-          setStudents(mapped);
+          })));
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     };
     loadStudents();
   }, []);
@@ -58,28 +49,15 @@ export default function TeacherAttendance() {
 
   const handleSave = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
       const today = new Date().toISOString().slice(0, 10);
-      const res = await fetch('/api/attendance', {
+      await apiCall('/attendance', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           date: today,
-          records: students.map((s) => ({
-            studentId: s.id,
-            status: s.status,
-          })),
+          records: students.map((s) => ({ studentId: s.id, status: s.status })),
         }),
       });
-      if (!res.ok) {
-        toast.error('हजेरी जतन करण्यात अडचण आली');
-        return;
-      }
-      toast.success('हजेरी जतन केली!');
+      toast.success('हजेरी यशस्वीरित्या जतन केली!');
     } catch {
       toast.error('हजेरी जतन करण्यात अडचण आली');
     }
@@ -100,7 +78,6 @@ export default function TeacherAttendance() {
         </div>
       </div>
 
-      {/* Stats bar */}
       <div className="grid grid-cols-3 gap-4">
         <div className="stat-card text-center">
           <div className="text-2xl font-bold text-success">{stats.present}</div>
@@ -116,7 +93,6 @@ export default function TeacherAttendance() {
         </div>
       </div>
 
-      {/* Student list */}
       <div className="portal-card">
         <div className="overflow-x-auto">
           <table className="w-full">

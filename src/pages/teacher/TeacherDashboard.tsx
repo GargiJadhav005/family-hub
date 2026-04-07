@@ -6,22 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiCall } from '@/lib/api';
 import { toast } from 'sonner';
-
-interface AttendanceStudent {
-  id: string;
-  name: string;
-  roll: string;
-  status: string;
-}
-
-interface Meeting {
-  _id: string;
-  studentName: string;
-  timeLabel: string;
-  mode: string;
-  status: string;
-  date: string;
-}
+import { Link } from 'react-router-dom';
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -36,85 +21,54 @@ export default function TeacherDashboard() {
     queryFn: () => apiCall('/meetings'),
   });
 
-  const { data: attendanceData } = useQuery({
-    queryKey: ['teacher-attendance-today'],
-    queryFn: () => apiCall('/attendance'),
+  const { data: homeworkData } = useQuery({
+    queryKey: ['teacher-homework-dash'],
+    queryFn: () => apiCall('/homework'),
   });
 
-  const students: AttendanceStudent[] = (studentsData?.students ?? []).map((s: any) => ({
-    id: s.id,
-    name: s.name,
-    roll: s.roll,
-    status: 'present',
-  }));
-
-  const meetings: Meeting[] = meetingsData?.meetings ?? [];
-
-  const presentCount = attendanceData?.records
-    ? attendanceData.records.filter((r: any) => r.status === 'present').length
-    : 0;
-  const totalStudents = students.length;
+  const students: any[] = studentsData?.students ?? [];
+  const meetings: any[] = meetingsData?.meetings ?? [];
+  const homework: any[] = homeworkData?.homework ?? [];
+  const scheduledMeetings = meetings.filter((m: any) => m.status === 'नियोजित');
+  const pendingHomework = homework.filter((h: any) => !h.completed);
 
   const statCards = [
     {
-      label: 'आजची उपस्थिती',
-      value: totalStudents ? `${Math.round((presentCount / totalStudents) * 100)}%` : '—',
+      label: 'एकूण विद्यार्थी',
+      value: String(students.length),
       icon: Users,
-      color: 'text-success',
-      trend: `${presentCount}/${totalStudents} विद्यार्थी उपस्थित`,
+      color: 'text-primary',
+      trend: `${user?.meta?.class || ''} वर्ग`,
     },
     {
       label: 'येणाऱ्या सभा',
-      value: String(meetings.filter(m => m.status === 'नियोजित').length).padStart(2, '०'),
+      value: String(scheduledMeetings.length),
       icon: Calendar,
-      color: 'text-primary',
+      color: 'text-success',
       trend: 'पालक-शिक्षक सभा',
     },
     {
-      label: 'एकूण विद्यार्थी',
-      value: String(totalStudents).padStart(2, '०'),
+      label: 'प्रलंबित गृहपाठ',
+      value: String(pendingHomework.length),
       icon: FileText,
-      color: 'text-destructive',
-      trend: 'आपल्या वर्गातील',
+      color: 'text-warning',
+      trend: 'सक्रिय असाइनमेंट',
     },
   ];
-
-  const handleSaveAttendance = async () => {
-    try {
-      const today = new Date().toISOString().slice(0, 10);
-      await apiCall('/attendance', {
-        method: 'POST',
-        body: JSON.stringify({
-          date: today,
-          records: students.map(s => ({ studentId: s.id, status: s.status })),
-        }),
-      });
-      toast.success('हजेरी जतन केली!');
-    } catch {
-      toast.error('हजेरी जतन करण्यात अडचण आली');
-    }
-  };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold">शिक्षक डॅशबोर्ड</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">नमस्कार, {user?.name || 'शिक्षक'}! 👋</h1>
         <p className="text-sm text-muted-foreground">
           आजचा दिनांक: {new Date().toLocaleDateString('mr-IN')} •{' '}
-          <span className="text-primary font-medium">{user?.meta?.class || 'आपला वर्ग'} सत्र सुरू आहे</span>
+          <span className="text-primary font-medium">{user?.meta?.class || 'आपला वर्ग'}</span>
         </p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {statCards.map((s, i) => (
-          <motion.div
-            key={s.label}
-            className="stat-card"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
+          <motion.div key={s.label} className="stat-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">{s.label}</span>
               <s.icon className="w-5 h-5 text-muted-foreground" />
@@ -126,70 +80,56 @@ export default function TeacherDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Attendance */}
         <div className="lg:col-span-2 portal-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-lg">विद्यार्थी हजेरी फलक</h3>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">सर्व हजर करा</Button>
-              <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={handleSaveAttendance}>
-                बदल जतन करा
-              </Button>
-            </div>
+            <h3 className="font-bold text-lg">विद्यार्थी यादी</h3>
+            <Link to="/teacher/attendance">
+              <Button variant="outline" size="sm">हजेरी भरा</Button>
+            </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {students.slice(0, 8).map((s) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {students.slice(0, 8).map((s: any) => (
               <div key={s.id} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-secondary/50">
-                <Avatar className="w-14 h-14">
-                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                    {s.name.charAt(0)}
+                <Avatar className="w-12 h-12">
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                    {s.name?.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                <p className="text-sm font-medium text-center">{s.name}</p>
-                <p className="text-xs text-muted-foreground">अ.क्र. {s.roll}</p>
-                <div className="flex gap-1">
-                  <button className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${s.status === 'present' ? 'bg-success text-success-foreground' : 'bg-secondary text-muted-foreground'}`}>
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
-                  <button className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${s.status === 'absent' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-muted-foreground'}`}>
-                    <XCircle className="w-4 h-4" />
-                  </button>
-                  <button className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${s.status === 'late' ? 'bg-warning text-warning-foreground' : 'bg-secondary text-muted-foreground'}`}>
-                    <AlertCircle className="w-4 h-4" />
-                  </button>
-                </div>
+                <p className="text-xs font-medium text-center line-clamp-1">{s.name}</p>
+                <p className="text-[10px] text-muted-foreground">अ.क्र. {s.roll}</p>
               </div>
             ))}
           </div>
+          {students.length > 8 && (
+            <p className="text-xs text-muted-foreground text-center mt-3">
+              + {students.length - 8} अधिक विद्यार्थी
+            </p>
+          )}
         </div>
 
-        {/* Meetings */}
         <div className="portal-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold">सभा वेळापत्रक</h3>
+            <h3 className="font-bold">आगामी सभा</h3>
             <Calendar className="w-4 h-4 text-muted-foreground" />
           </div>
           <div className="space-y-3">
-            {meetings.length === 0 ? (
+            {scheduledMeetings.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">कोणत्याही सभा नाहीत</p>
             ) : (
-              meetings.slice(0, 4).map((m) => (
+              scheduledMeetings.slice(0, 3).map((m: any) => (
                 <div key={m._id} className="p-3 rounded-lg bg-secondary/50">
-                  {m.status !== 'पूर्ण' && <p className="text-xs text-muted-foreground mb-1">पुढील सभा</p>}
-                  <p className="font-semibold text-sm">{m.studentName} कुटुंब सभा</p>
+                  <p className="font-semibold text-sm">{m.studentName}</p>
                   <p className="text-xs text-muted-foreground">{m.timeLabel}</p>
                   <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
-                    m.mode === 'प्रत्यक्ष' ? 'bg-primary/10 text-primary' :
-                    m.mode === 'ऑनलाइन' ? 'bg-warning/10 text-warning' :
-                    'bg-success/10 text-success'
-                  }`}>
-                    {m.mode}
-                  </span>
+                    m.mode === 'प्रत्यक्ष' ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'
+                  }`}>{m.mode}</span>
                 </div>
               ))
             )}
           </div>
-          <Button variant="outline" className="w-full mt-3 text-sm">नवीन सभा बुक करा</Button>
+          <Link to="/teacher/meetings">
+            <Button variant="outline" className="w-full mt-3 text-sm">सर्व सभा पहा</Button>
+          </Link>
         </div>
       </div>
     </div>

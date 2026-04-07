@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { apiCall, API_BASE_URL } from '@/lib/api';
+import { apiCall } from '@/lib/api';
+import { MOCK_USERS, MOCK_STUDENTS } from '@/lib/mockData';
 
 export type UserRole = 'teacher' | 'parent' | 'student' | 'admin';
 
@@ -35,52 +36,61 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const DEMO_CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
+  'teacher@vainateya.edu': { password: 'teacher123', role: 'teacher' },
+  'parent@vainateya.edu': { password: 'parent123', role: 'parent' },
+  'student@vainateya.edu': { password: 'student123', role: 'student' },
+  'admin@vainateya.edu': { password: 'admin123', role: 'admin' },
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     const stored = localStorage.getItem('school_user');
     return stored ? JSON.parse(stored) : null;
   });
 
-  const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
-
-  // Restore logged-in user from backend using stored token
-  useEffect(() => {
-    const restore = async () => {
-      try {
-        const token = localStorage.getItem('auth_token');
-        if (!token) return;
-        
-        const data = await apiCall('/auth/me');
-        if (data.user) {
-          setUser(data.user);
-          localStorage.setItem('school_user', JSON.stringify(data.user));
-        }
-      } catch (err) {
-        console.error('Failed to restore user session:', err);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('school_user');
-      }
-    };
-    restore();
-  }, []);
+  const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>(() => {
+    return MOCK_STUDENTS.map(s => ({
+      id: s.id,
+      name: s.name,
+      roll: s.roll,
+      class: s.className,
+      parentName: s.parentName,
+      studentEmail: s.studentEmail,
+      studentPassword: '',
+      parentEmail: s.parentEmail,
+      parentPassword: '',
+    }));
+  });
 
   const login = useCallback(async (email: string, password: string, role: UserRole): Promise<boolean> => {
+    // Try backend first
     try {
       const data = await apiCall('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password, role }),
       });
-
-      if (!data.user || !data.token) return false;
-
-      setUser(data.user);
-      localStorage.setItem('school_user', JSON.stringify(data.user));
-      localStorage.setItem('auth_token', data.token);
-      return true;
-    } catch (err) {
-      console.error('Login error:', err);
-      return false;
+      if (data?.user && data?.token) {
+        setUser(data.user);
+        localStorage.setItem('school_user', JSON.stringify(data.user));
+        localStorage.setItem('auth_token', data.token);
+        return true;
+      }
+    } catch {
+      // Fall through to demo login
     }
+
+    // Demo/mock login
+    const demo = DEMO_CREDENTIALS[email];
+    if (demo && demo.password === password && demo.role === role) {
+      const mockUser = MOCK_USERS[role];
+      setUser(mockUser);
+      localStorage.setItem('school_user', JSON.stringify(mockUser));
+      localStorage.setItem('auth_token', 'demo-token');
+      return true;
+    }
+
+    return false;
   }, []);
 
   const logout = useCallback(() => {
@@ -102,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: studentData.name,
         roll: studentData.roll,
         class: studentData.class,
-        parentName: studentData.parentName,
+        parentName: studentData.parentName || parentName,
         studentEmail: studentData.studentEmail,
         studentPassword: studentData.studentPassword,
         parentEmail: studentData.parentEmail,
@@ -115,35 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Enrollment error:', err);
       throw err;
     }
-  }, []);
-
-  // Load students on mount
-  useEffect(() => {
-    const loadStudents = async () => {
-      try {
-        const token = localStorage.getItem('auth_token');
-        if (!token) return;
-        
-        const data = await apiCall('/students');
-        if (Array.isArray(data.students)) {
-          const mapped: EnrolledStudent[] = data.students.map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            roll: s.roll,
-            class: s.class,
-            parentName: s.parentName,
-            studentEmail: s.studentEmail,
-            studentPassword: '',
-            parentEmail: s.parentEmail,
-            parentPassword: '',
-          }));
-          setEnrolledStudents(mapped);
-        }
-      } catch (err) {
-        console.error('Failed to load students:', err);
-      }
-    };
-    loadStudents();
   }, []);
 
   return (
