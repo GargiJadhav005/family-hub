@@ -4,11 +4,19 @@ import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   GraduationCap, LogIn, BookOpen, Users,
-  UserCircle2, Settings2, Eye, EyeOff, ArrowLeft,
+  UserCircle2, Settings2, Eye, EyeOff, ArrowLeft, Mail, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiCall } from "@/lib/api";
 
 const roles: { role: UserRole; label: string; icon: React.ElementType; grad: string }[] = [
   { role: 'teacher',  label: 'शिक्षक',     icon: BookOpen,    grad: 'from-blue-500 to-indigo-600' },
@@ -26,6 +34,11 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
   const [showPw, setShowPw]     = useState(false);
+  
+  // Forgot password state
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const { login }  = useAuth();
   const navigate   = useNavigate();
@@ -44,6 +57,29 @@ export default function Login() {
       navigate(map[role]);
     } else {
       toast.error("चुकीचा ईमेल किंवा पासवर्ड");
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      toast.error("कृपया ईमेल पत्ता प्रविष्ट करा");
+      return;
+    }
+    
+    setForgotLoading(true);
+    try {
+      await apiCall("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      toast.success("पासवर्ड रीसेट लिंक पाठवली गेली आहे");
+      setForgotOpen(false);
+      setForgotEmail("");
+    } catch (err) {
+      toast.error("काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा.");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -143,7 +179,11 @@ export default function Login() {
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-widest">
                   पासवर्ड
                 </label>
-                <button type="button" className="text-[11px] text-slate-400 hover:text-indigo-600 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  className="text-[11px] text-slate-400 hover:text-indigo-600 transition-colors"
+                >
                   विसरलात?
                 </button>
               </div>
@@ -198,6 +238,52 @@ export default function Login() {
           </div>
         </div>
       </motion.div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-slate-800">पासवर्ड विसरलात?</DialogTitle>
+            <DialogDescription className="text-slate-500">
+              आपला ईमेल पत्ता प्रविष्ट करा. आम्ही आपल्याला पासवर्ड रीसेट लिंक पाठवू.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4 mt-4">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                type="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+                className="pl-10 h-11 rounded-xl bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-100"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setForgotOpen(false)}
+                className="flex-1 h-11 rounded-xl"
+              >
+                रद्द करा
+              </Button>
+              <Button
+                type="submit"
+                disabled={forgotLoading}
+                className={`flex-1 h-11 rounded-xl gap-2 bg-gradient-to-r ${activeRole.grad}`}
+              >
+                {forgotLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "लिंक पाठवा"
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

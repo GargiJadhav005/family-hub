@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Attendance, Student } from "../models";
+import { Attendance, Student, Notification } from "../models";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 

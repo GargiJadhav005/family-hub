@@ -197,6 +197,142 @@ export async function updateHomeworkStatus(req: AuthRequest, res: Response): Pro
 }
 
 /**
+ * GET /api/homework/:id
+ * Get single homework details
+ */
+export async function getHomeworkById(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid homework ID" });
+      return;
+    }
+
+    const homework = await Homework.findById(id).lean();
+
+    if (!homework) {
+      res.status(404).json({ error: "Homework not found" });
+      return;
+    }
+
+    res.json({ homework: toClientHomework(homework) });
+  } catch (err) {
+    console.error("GetHomeworkById error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * PATCH /api/homework/:id
+ * Update homework (teacher only, must be creator)
+ */
+export async function updateHomework(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+
+    if (!user) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    if (user.role !== "teacher") {
+      res.status(403).json({ error: "Only teachers can update homework" });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid homework ID" });
+      return;
+    }
+
+    const body = HomeworkSchema.partial().parse(req.body);
+
+    const homework = await Homework.findById(id);
+
+    if (!homework) {
+      res.status(404).json({ error: "Homework not found" });
+      return;
+    }
+
+    // Check if teacher is the creator
+    if (!homework.createdByTeacherId.equals(user._id)) {
+      res.status(403).json({ error: "You can only update homework you created" });
+      return;
+    }
+
+    // Update fields
+    Object.assign(homework, body);
+    await homework.save();
+
+    res.json({
+      message: "Homework updated successfully",
+      homework: toClientHomework(homework),
+    });
+  } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid input", details: err.errors });
+      return;
+    }
+    console.error("UpdateHomework error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * DELETE /api/homework/:id
+ * Delete homework and all associated statuses (teacher only, must be creator)
+ */
+export async function deleteHomework(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+
+    if (!user) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    if (user.role !== "teacher") {
+      res.status(403).json({ error: "Only teachers can delete homework" });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid homework ID" });
+      return;
+    }
+
+    const homework = await Homework.findById(id);
+
+    if (!homework) {
+      res.status(404).json({ error: "Homework not found" });
+      return;
+    }
+
+    // Check if teacher is the creator
+    if (!homework.createdByTeacherId.equals(user._id)) {
+      res.status(403).json({ error: "You can only delete homework you created" });
+      return;
+    }
+
+    // Cascading delete: remove all HomeworkStatus entries for this homework
+    await HomeworkStatus.deleteMany({ homeworkId: id });
+
+    // Delete the homework
+    await Homework.findByIdAndDelete(id);
+
+    res.json({
+      message: "Homework and all associated statuses deleted successfully",
+    });
+  } catch (err) {
+    console.error("DeleteHomework error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
  * GET /api/homework/student/all
  */
 export async function getStudentAllHomeworkWithStatus(

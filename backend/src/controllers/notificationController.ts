@@ -19,19 +19,36 @@ export async function getNotifications(req: AuthRequest, res: Response): Promise
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    const notifications = await Notification.find({ recipientId: userId })
+    // Query using $or to support both recipientId and userId fields
+    const userQuery = { $or: [{ recipientId: userId }, { userId: userId }] };
+
+    const notifications = await Notification.find(userQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Notification.countDocuments({ recipientId: userId });
+    const total = await Notification.countDocuments(userQuery);
     const unreadCount = await Notification.countDocuments({
-      recipientId: userId,
-      read: false,
+      ...userQuery,
+      $or: [
+        { recipientId: userId, read: false },
+        { recipientId: userId, isRead: false },
+        { userId: userId, read: false },
+        { userId: userId, isRead: false },
+      ],
     });
 
     res.json({
-      notifications,
+      notifications: notifications.map((n: any) => ({
+        id: n._id.toString(),
+        event: n.event,
+        title: n.title,
+        message: n.message,
+        data: n.data || {},
+        read: n.read || n.isRead || false,
+        readAt: n.readAt,
+        createdAt: n.createdAt,
+      })),
       pagination: {
         page,
         limit,
@@ -59,11 +76,25 @@ export async function getUnreadNotifications(req: AuthRequest, res: Response): P
 
     const userId = req.user._id;
     const unreadNotifications = await Notification.find({
-      recipientId: userId,
-      read: false,
+      $or: [
+        { recipientId: userId, read: false },
+        { recipientId: userId, isRead: false },
+        { userId: userId, read: false },
+        { userId: userId, isRead: false },
+      ],
     }).sort({ createdAt: -1 });
 
-    res.json({ notifications: unreadNotifications });
+    res.json({
+      notifications: unreadNotifications.map((n: any) => ({
+        id: n._id.toString(),
+        event: n.event,
+        title: n.title,
+        message: n.message,
+        data: n.data || {},
+        read: false,
+        createdAt: n.createdAt,
+      })),
+    });
   } catch (error) {
     console.error("GetUnreadNotifications error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -104,9 +135,10 @@ export async function markAllAsRead(req: AuthRequest, res: Response): Promise<vo
 
     const userId = req.user._id;
 
+    // Update all notifications for this user (support both field names)
     await Notification.updateMany(
-      { recipientId: userId, read: false },
-      { read: true, readAt: new Date() }
+      { $or: [{ recipientId: userId }, { userId: userId }] },
+      { read: true, isRead: true, readAt: new Date() }
     );
 
     res.json({ ok: true, message: "All notifications marked as read" });
@@ -153,7 +185,10 @@ export async function deleteAllNotifications(req: AuthRequest, res: Response): P
 
     const userId = req.user._id;
 
-    const result = await Notification.deleteMany({ recipientId: userId });
+    // Delete all notifications for this user (support both field names)
+    const result = await Notification.deleteMany({
+      $or: [{ recipientId: userId }, { userId: userId }],
+    });
 
     res.json({
       ok: true,

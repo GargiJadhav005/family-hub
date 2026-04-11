@@ -37,11 +37,27 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // Password reset fields
+    passwordResetToken: {
+      type: String,
+      default: null,
+    },
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+    },
+    // Track if password needs to be changed (for auto-generated passwords)
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
 
 // Compound index: email unique per role
 userSchema.index({ email: 1, role: 1 }, { unique: true });
+// Index for password reset token lookups
+userSchema.index({ passwordResetToken: 1 });
 
 export const User = mongoose.model("User", userSchema);

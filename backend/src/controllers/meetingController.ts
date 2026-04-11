@@ -1,7 +1,8 @@
 import { Response } from "express";
-import { Meeting, Student } from "../models";
+import { Meeting, Student, Notification } from "../models";
 import { AuthRequest } from "../middleware/auth";
 import { getMetaValue } from "../utils/auth";
+import { notifyMeetingScheduled } from "../utils/notification";
 import { z } from "zod";
 
 /**
@@ -186,13 +187,14 @@ export async function createMeeting(
     });
 
     /**
-     * 🔔 FUTURE: NOTIFICATION SYSTEM
+     * Send notification to parent
      */
-    // await sendNotification({
-    //   userId: student.parentUserId,
-    //   title: "New Meeting Scheduled",
-    //   message: `${req.user.name} scheduled a meeting on ${body.date}`,
-    // });
+    await notifyMeetingScheduled(
+      student.parentUserId.toString(),
+      req.user.name,
+      body.date,
+      body.mode
+    );
 
     /**
      * 📤 RESPONSE
@@ -283,13 +285,18 @@ export async function updateMeetingStatus(
     await meeting.save();
 
     /**
-     * 🔔 NOTIFICATION HOOK
+     * Send notification about status change
      */
-    // await sendNotification({
-    //   userId: meeting.parentId,
-    //   title: "Meeting Updated",
-    //   message: `Meeting status changed to ${status}`,
-    // });
+    if (meeting.parentId) {
+      await Notification.create({
+        recipientId: meeting.parentId,
+        userId: meeting.parentId,
+        event: "meeting_scheduled",
+        title: "Meeting Status Updated",
+        message: `Meeting status changed to ${status}`,
+        data: { status, meetingId: meeting._id },
+      });
+    }
 
     res.json({
       meeting: {
@@ -299,7 +306,133 @@ export async function updateMeetingStatus(
       },
     });
   } catch (err) {
-    console.error("❌ updateMeetingStatus error:", err);
+    console.error("UpdateMeetingStatus error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * ============================
+ * PATCH /api/meetings/:id
+ * Update meeting details (teacher/admin only)
+ * ============================
+ */
+export async function updateMeeting(
+  req: AuthRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const { id } = req.params;
+    const { date, timeLabel, mode, notes } = req.body;
+
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+
+    // Access control
+    if (
+      req.user.role === "teacher" &&
+      !meeting.teacherId?.equals(req.user._id)
+    ) {
+      res.status(403).json({ error: "Not authorized" });
+      return;
+    }
+
+    // Update fields if provided
+    if (date) meeting.date = new Date(date);
+    if (timeLabel) meeting.timeLabel = timeLabel;
+    if (mode) meeting.mode = mode;
+    if (notes !== undefined) meeting.notes = notes;
+
+    await meeting.save();
+
+    // Notify parent about update
+    if (meeting.parentId) {
+      await Notification.create({
+        recipientId: meeting.parentId,
+        userId: meeting.parentId,
+        event: "meeting_scheduled",
+        title: "Meeting Updated",
+        message: `Meeting with ${meeting.teacherName} has been updated`,
+        data: { meetingId: meeting._id },
+      });
+    }
+
+    res.json({
+      message: "Meeting updated successfully",
+      meeting: {
+        id: meeting._id.toString(),
+        date: meeting.date,
+        timeLabel: meeting.timeLabel,
+        mode: meeting.mode,
+        notes: meeting.notes,
+        status: meeting.status,
+        updatedAt: new Date(),
+      },
+    });
+  } catch (err) {
+    console.error("UpdateMeeting error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * ============================
+ * DELETE /api/meetings/:id
+ * Delete meeting (teacher/admin only)
+ * ============================
+ */
+export async function deleteMeeting(
+  req: AuthRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const { id } = req.params;
+
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      res.status(404).json({ error: "Meeting not found" });
+      return;
+    }
+
+    // Access control - only creator or admin can delete
+    if (
+      req.user.role === "teacher" &&
+      !meeting.teacherId?.equals(req.user._id)
+    ) {
+      res.status(403).json({ error: "Not authorized" });
+      return;
+    }
+
+    // Notify parent about cancellation
+    if (meeting.parentId) {
+      await Notification.create({
+        recipientId: meeting.parentId,
+        userId: meeting.parentId,
+        event: "meeting_scheduled",
+        title: "Meeting Cancelled",
+        message: `Meeting with ${meeting.teacherName} has been cancelled`,
+        data: { meetingId: meeting._id },
+      });
+    }
+
+    await Meeting.findByIdAndDelete(id);
+
+    res.json({ message: "Meeting deleted successfully" });
+  } catch (err) {
+    console.error("DeleteMeeting error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

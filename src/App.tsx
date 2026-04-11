@@ -22,6 +22,7 @@ const LoadingSpinner = () => (
 // Public Pages - Lazy loaded
 const Index = lazy(() => import("@/pages/Index"));
 const Login = lazy(() => import("@/pages/Login"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const Campus = lazy(() => import("@/pages/Campus"));
 const Activities = lazy(() => import("@/pages/Activities"));
 const Admissions = lazy(() => import("@/pages/Admissions"));
@@ -84,6 +85,7 @@ function App() {
               {/* PUBLIC */}
               <Route path="/" element={<Suspense fallback={<LoadingSpinner />}><Index /></Suspense>} />
               <Route path="/login" element={<Suspense fallback={<LoadingSpinner />}><Login /></Suspense>} />
+              <Route path="/reset-password" element={<Suspense fallback={<LoadingSpinner />}><ResetPassword /></Suspense>} />
               <Route path="/campus" element={<Suspense fallback={<LoadingSpinner />}><Campus /></Suspense>} />
               <Route path="/activities" element={<Suspense fallback={<LoadingSpinner />}><Activities /></Suspense>} />
               <Route path="/admissions" element={<Suspense fallback={<LoadingSpinner />}><Admissions /></Suspense>} />
