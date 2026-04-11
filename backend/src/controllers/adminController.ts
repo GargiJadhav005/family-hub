@@ -97,6 +97,17 @@ export async function getDashboard(req: AuthRequest, res: Response) {
         Enquiry.countDocuments({ status: "new" }),
         Announcement.countDocuments({ isActive: true }),
       ]);
+    const usersByMonthData = await User.aggregate([
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { "_id": 1 } },
+      { $limit: 12 }
+    ]);
+    const userGrowth = usersByMonthData.map(d => ({ month: d._id, users: d.count }));
 
     res.json({
       totalUsers,
@@ -105,6 +116,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
       parents,
       newEnquiries,
       announcements,
+      userGrowth
     });
   } catch (err) {
     res.status(500).json({ error: "Dashboard error" });
@@ -143,7 +155,7 @@ export async function getAllUsers(req: AuthRequest, res: Response) {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.errors });
     }
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to fetch users",
       details: process.env.NODE_ENV === 'development' ? err?.message : undefined
     });
@@ -334,6 +346,31 @@ export async function deleteUser(req: AuthRequest, res: Response) {
   }
 }
 
+// ===================== RESET USER PASSWORD =====================
+
+export async function resetUserPassword(req: AuthRequest, res: Response) {
+  try {
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: "Password must be at least 4 characters long" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.passwordHash = await hashPassword(newPassword);
+    await user.save();
+
+    res.json({ message: "User password reset successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Password reset failed" });
+  }
+}
+
 // ===================== ANNOUNCEMENTS =====================
 
 export async function getAnnouncements(req: AuthRequest, res: Response) {
@@ -342,8 +379,8 @@ export async function getAnnouncements(req: AuthRequest, res: Response) {
       .sort({ createdAt: -1 })
       .limit(50);
     res.json({ announcements });
-  } catch {
-    res.status(500).json({ 
+  } catch (err: any) {
+    res.status(500).json({
       error: "Failed to fetch announcements",
       details: process.env.NODE_ENV === 'development' ? err?.message : undefined
     });
@@ -390,6 +427,41 @@ export async function createAnnouncement(req: AuthRequest, res: Response) {
   }
 }
 
+export async function updateAnnouncement(req: AuthRequest, res: Response) {
+  try {
+    const { announcementId } = req.params;
+    const updateData = req.body;
+
+    const announcement = await Announcement.findByIdAndUpdate(
+      announcementId,
+      updateData,
+      { new: true }
+    );
+    if (!announcement) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    res.json({ announcement });
+  } catch {
+    res.status(500).json({ error: "Update failed" });
+  }
+}
+
+export async function deleteAnnouncement(req: AuthRequest, res: Response) {
+  try {
+    const { announcementId } = req.params;
+    const announcement = await Announcement.findByIdAndDelete(announcementId);
+
+    if (!announcement) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    res.json({ message: "Announcement deleted" });
+  } catch {
+    res.status(500).json({ error: "Delete failed" });
+  }
+}
+
 // ===================== ENQUIRIES =====================
 
 export async function getEnquiries(req: AuthRequest, res: Response) {
@@ -399,8 +471,8 @@ export async function getEnquiries(req: AuthRequest, res: Response) {
       .limit(50);
 
     res.json({ enquiries });
-  } catch {
-    res.status(500).json({ 
+  } catch (err: any) {
+    res.status(500).json({
       error: "Failed to fetch enquiries",
       details: process.env.NODE_ENV === 'development' ? err?.message : undefined
     });
@@ -457,5 +529,20 @@ export async function markEnquiryAsRead(req: AuthRequest, res: Response) {
     res.json({ enquiry });
   } catch {
     res.status(500).json({ error: "Failed" });
+  }
+}
+
+export async function deleteEnquiry(req: AuthRequest, res: Response) {
+  try {
+    const { enquiryId } = req.params;
+    const enquiry = await Enquiry.findByIdAndDelete(enquiryId);
+
+    if (!enquiry) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    res.json({ message: "Enquiry deleted" });
+  } catch {
+    res.status(500).json({ error: "Delete failed" });
   }
 }

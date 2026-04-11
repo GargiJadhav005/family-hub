@@ -51,6 +51,7 @@ export type { MeetingMode, MeetingStatus } from "./Meeting";
  */
 export { Instruction } from "./Instruction";
 export { Quiz, QuizResult } from "./Quiz";
+export * from "./Course";
 
 /**
  * 🚀 FUTURE EXTENSIONS (KEEP FOR SCALABILITY)

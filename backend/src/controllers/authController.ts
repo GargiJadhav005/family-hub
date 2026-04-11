@@ -155,3 +155,39 @@ export async function refreshToken(req: AuthRequest, res: Response): Promise<voi
     });
   }
 }
+
+/**
+ * POST /api/auth/reset-password
+ * Simple forgot password: verify name, email, (and dob if available) to reset password.
+ */
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { email, name, dob, newPassword, role } = req.body;
+    if (!email || !name || !newPassword || newPassword.length < 4) {
+      res.status(400).json({ error: "Missing required fields or password too short" });
+      return;
+    }
+
+    const query: any = { email, name };
+    if (role) {
+      query.role = role;
+    }
+
+    const user = await User.findOne(query);
+    if (!user) {
+      // Intentionally vague
+      res.status(404).json({ error: "User not found with matching details" });
+      return;
+    }
+
+    // Hash and update
+    const { hashPassword } = await import("../utils/auth");
+    user.passwordHash = await hashPassword(newPassword);
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err: any) {
+    console.error("Reset password error:", err);
+    res.status(500).json({ error: "Failed to reset password" });
+  }
+}

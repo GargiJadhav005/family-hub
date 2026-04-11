@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Fall through to demo login in dev only
     }
 
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && !import.meta.env.VITE_API_URL) {
       const demo = DEMO_CREDENTIALS[email];
       if (demo && demo.password === password && demo.role === role) {
         const mockUser = MOCK_USERS[role];

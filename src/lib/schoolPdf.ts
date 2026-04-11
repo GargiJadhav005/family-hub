@@ -1,22 +1,80 @@
-import { jsPDF } from "jspdf";
+/**
+ * schoolPdf.ts
+ * 
+ * Generates formatted PDFs using browser print dialog — supports Devanagari Unicode
+ * without needing custom fonts. The browser uses system fonts which include Marathi/Hindi.
+ */
 
 type Mail = { line1?: string; line2?: string; city?: string; state?: string; pincode?: string };
 type Emerg = { name?: string; phone?: string; relation?: string };
 
 function formatMailing(m?: Mail): string {
   if (!m) return "";
-  const parts = [
-    m.line1,
-    m.line2,
-    [m.city, m.state].filter(Boolean).join(", "),
-    m.pincode,
-  ].filter(Boolean);
+  const parts = [m.line1, m.line2, [m.city, m.state].filter(Boolean).join(", "), m.pincode].filter(Boolean);
   return parts.join(", ");
 }
 
 function classLabel(p: Record<string, unknown>): string {
   return String(p.className ?? p.class ?? "");
 }
+
+/** Opens a styled HTML print window — supports Marathi/Devanagari natively */
+function printHtml(html: string, fileName = "document"): void {
+  const win = window.open("", "_blank", "width=900,height=700");
+  if (!win) { alert("Popup blocked — allow popups to download PDF"); return; }
+  win.document.write(`<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${fileName}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans Devanagari', 'Arial Unicode MS', Arial, sans-serif;
+      font-size: 11pt;
+      color: #111;
+      padding: 18mm 20mm;
+      line-height: 1.6;
+    }
+    h1 { font-size: 16pt; font-weight: 700; margin-bottom: 4px; color: #1a3a6b; border-bottom: 2px solid #1a3a6b; padding-bottom: 6px; }
+    h2 { font-size: 12pt; font-weight: 600; margin: 12px 0 6px; color: #1a3a6b; }
+    .school-header { text-align: center; margin-bottom: 20px; }
+    .school-header h2 { font-size: 14pt; color: #1a3a6b; }
+    .school-header p { font-size: 10pt; color: #555; margin-top: 2px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin: 10px 0; }
+    .info-row { display: flex; gap: 8px; font-size: 10.5pt; padding: 2px 0; }
+    .info-row .lbl { color: #555; min-width: 120px; }
+    .info-row .val { font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10.5pt; }
+    th { background: #1a3a6b; color: white; padding: 7px 10px; text-align: left; font-weight: 600; }
+    td { padding: 6px 10px; border-bottom: 1px solid #ddd; }
+    tr:nth-child(even) td { background: #f5f7ff; }
+    .grade-A { color: #16a34a; font-weight: 700; }
+    .grade-B { color: #2563eb; font-weight: 700; }
+    .grade-C { color: #ea580c; font-weight: 700; }
+    .summary-box { display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
+    .stat { background: #f0f4ff; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 90px; }
+    .stat-val { font-size: 20pt; font-weight: 700; color: #1a3a6b; }
+    .stat-lbl { font-size: 9pt; color: #555; margin-top: 2px; }
+    .comment-box { background: #f8f9fa; border-left: 4px solid #1a3a6b; padding: 10px 14px; margin: 10px 0; border-radius: 0 6px 6px 0; font-style: italic; }
+    .footer { text-align: right; margin-top: 30px; font-size: 10pt; color: #555; border-top: 1px solid #ccc; padding-top: 10px; }
+    .signature-line { display: inline-block; width: 180px; border-bottom: 1px solid #333; margin-left: 10px; }
+    @media print {
+      body { padding: 10mm 14mm; }
+      button { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <button onclick="window.print()" style="position:fixed;top:12px;right:12px;padding:8px 18px;background:#1a3a6b;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;z-index:999;">🖨️ PDF / Print</button>
+  ${html}
+</body>
+</html>`);
+  win.document.close();
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ReportCardPdfInput = {
   academicYear: string;
@@ -41,95 +99,110 @@ export type ReportCardPdfInput = {
   studentProfile: Record<string, unknown>;
 };
 
-export function downloadReportCardPdf(opts: ReportCardPdfInput): void {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  const margin = 14;
-  let y = 12;
+// ── Report Card PDF ───────────────────────────────────────────────────────────
 
-  const addBlock = (text: string, size = 10) => {
-    doc.setFontSize(size);
-    const lines = doc.splitTextToSize(text, pageW - 2 * margin);
-    doc.text(lines, margin, y);
-    y += Math.max(lines.length, 1) * (size * 0.42) + 1.5;
-    if (y > 280) {
-      doc.addPage();
-      y = 12;
-    }
+export function downloadReportCardPdf(opts: ReportCardPdfInput): void {
+  const p = opts.studentProfile;
+  const mail = formatMailing(p.mailingAddress as Mail | undefined);
+  const e = p.emergencyContact as Emerg | undefined;
+
+  const gradeClass = (g: string) => {
+    if (g.startsWith("A")) return "grade-A";
+    if (g.startsWith("B")) return "grade-B";
+    return "grade-C";
   };
 
-  addBlock("pragati pustika / Report card", 14);
-  addBlock(`saikshanik varsh: ${opts.academicYear}  |  satr: ${opts.term}`);
+  const subjectRows = opts.subjectGrades.map(g => `
+    <tr>
+      <td>${g.subject}</td>
+      <td class="${gradeClass(g.grade)}">${g.grade}</td>
+      <td>${g.scorePercent}%</td>
+      <td>${g.effort || "—"}</td>
+      <td>${g.remark || "—"}</td>
+    </tr>`).join("");
 
-  const p = opts.studentProfile;
-  addBlock(
-    `vidyarthi: ${p.name || ""}  |  anu. kr.: ${p.roll || ""}  |  iyatta: ${classLabel(p)}`
-  );
-  addBlock(`palakache nav: ${p.parentName || ""}`);
-  if (p.motherName || p.fatherName) {
-    addBlock(`aai: ${String(p.motherName || "-")}  |  vadil: ${String(p.fatherName || "-")}`);
-  }
-  addBlock(
-    `email (vidyarthi): ${String(p.studentEmail || "-")}  |  email (palak): ${String(p.parentEmail || "-")}`
-  );
-  if (p.dateOfBirth) addBlock(`janmatarikh: ${String(p.dateOfBirth)}`);
-  if (p.gender) addBlock(`ling: ${String(p.gender)}`);
-  if (p.bloodGroup) addBlock(`raktgat: ${String(p.bloodGroup)}`);
-  if (p.admissionDate) addBlock(`pravesh tarikh: ${String(p.admissionDate)}`);
-  if (p.previousSchool) addBlock(`magil shala: ${String(p.previousSchool)}`);
-  if (p.address) addBlock(`patta: ${String(p.address)}`);
-  const mail = formatMailing(p.mailingAddress as Mail | undefined);
-  if (mail) addBlock(`patr vyavahar patta: ${mail}`);
-  if (p.studentPhone || p.parentPhone) {
-    addBlock(
-      `phone vidyarthi: ${String(p.studentPhone || "-")}  |  phone palak: ${String(p.parentPhone || "-")}`
-    );
-  }
-  const e = p.emergencyContact as Emerg | undefined;
-  if (e?.name || e?.phone) {
-    addBlock(`aapatkaalin: ${e?.name || ""} (${e?.relation || ""}) ${e?.phone || ""}`);
-  }
-  if (p.alternateGuardianName) {
-    addBlock(
-      `palya palIkaDe palak: ${String(p.alternateGuardianName)} ${String(p.alternateGuardianPhone || "")}`
-    );
-  }
-  if (p.notes) addBlock(`tip: ${String(p.notes)}`);
+  const att = opts.attendanceSummary;
+  const hw = opts.homeworkCompletion;
 
-  y += 2;
-  addBlock("vishaynihay gun", 11);
-  for (const g of opts.subjectGrades) {
-    addBlock(
-      `${g.subject}: ${g.grade} (${g.scorePercent}%) - ${g.effort || ""}${g.remark ? " | " + g.remark : ""}`
-    );
-  }
+  const html = `
+    <div class="school-header">
+      <h2>वैनतेय प्राथमिक विद्या मंदिर</h2>
+      <p>प्रगती पुस्तिका — ${opts.academicYear} | सत्र: ${opts.term}</p>
+    </div>
 
-  if (opts.overallGrade) {
-    addBlock(`ekun shreni: ${opts.overallGrade} (${opts.overallPercent ?? ""}%)`);
-  }
+    <h1>📋 प्रगती पुस्तिका / Report Card</h1>
 
-  const a = opts.attendanceSummary;
-  if (a && (a.totalDays > 0 || a.presentDays > 0)) {
-    addBlock(
-      `hajeri: ekun ${a.totalDays}, upasthit ${a.presentDays}, anupasthit ${a.absentDays}, ushira ${a.lateDays}`
-    );
-  }
-  const h = opts.homeworkCompletion;
-  if (h && h.total > 0) {
-    addBlock(`grhapath: ${h.completed}/${h.total} purn`);
-  }
-  if (opts.teacherComment) {
-    addBlock(`shikshakancha abhipray: ${opts.teacherComment}`);
-  }
+    <h2>विद्यार्थी माहिती</h2>
+    <div class="info-grid">
+      <div class="info-row"><span class="lbl">नाव:</span><span class="val">${p.name || "—"}</span></div>
+      <div class="info-row"><span class="lbl">अनु. क्र.:</span><span class="val">${p.roll || "—"}</span></div>
+      <div class="info-row"><span class="lbl">इयत्ता:</span><span class="val">${classLabel(p)}</span></div>
+      <div class="info-row"><span class="lbl">पालकाचे नाव:</span><span class="val">${p.parentName || "—"}</span></div>
+      ${p.motherName ? `<div class="info-row"><span class="lbl">आईचे नाव:</span><span class="val">${p.motherName}</span></div>` : ""}
+      ${p.fatherName ? `<div class="info-row"><span class="lbl">वडिलांचे नाव:</span><span class="val">${p.fatherName}</span></div>` : ""}
+      ${p.dateOfBirth ? `<div class="info-row"><span class="lbl">जन्मतारीख:</span><span class="val">${p.dateOfBirth}</span></div>` : ""}
+      ${p.gender ? `<div class="info-row"><span class="lbl">लिंग:</span><span class="val">${p.gender}</span></div>` : ""}
+      ${p.bloodGroup ? `<div class="info-row"><span class="lbl">रक्तगट:</span><span class="val">${p.bloodGroup}</span></div>` : ""}
+      ${p.admissionDate ? `<div class="info-row"><span class="lbl">प्रवेश तारीख:</span><span class="val">${p.admissionDate}</span></div>` : ""}
+      ${p.studentEmail ? `<div class="info-row"><span class="lbl">ईमेल (विद्यार्थी):</span><span class="val">${p.studentEmail}</span></div>` : ""}
+      ${p.parentEmail ? `<div class="info-row"><span class="lbl">ईमेल (पालक):</span><span class="val">${p.parentEmail}</span></div>` : ""}
+      ${p.parentPhone ? `<div class="info-row"><span class="lbl">पालक फोन:</span><span class="val">${p.parentPhone}</span></div>` : ""}
+      ${mail ? `<div class="info-row"><span class="lbl">पत्ता:</span><span class="val">${mail}</span></div>` : (p.address ? `<div class="info-row"><span class="lbl">पत्ता:</span><span class="val">${p.address}</span></div>` : "")}
+      ${e?.name ? `<div class="info-row"><span class="lbl">आपत्कालीन संपर्क:</span><span class="val">${e.name} (${e.relation || "—"}) ${e.phone || ""}</span></div>` : ""}
+      ${p.previousSchool ? `<div class="info-row"><span class="lbl">मागील शाळा:</span><span class="val">${p.previousSchool}</span></div>` : ""}
+      ${p.notes ? `<div class="info-row"><span class="lbl">टिपा:</span><span class="val">${p.notes}</span></div>` : ""}
+    </div>
 
-  const fname = `report-card-${String(p.roll || "student").replace(/\W/g, "")}.pdf`;
-  doc.save(fname);
+    <h2>विषयनिहाय गुण</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>विषय</th>
+          <th>श्रेणी</th>
+          <th>गुण %</th>
+          <th>प्रयत्न</th>
+          <th>शेरा</th>
+        </tr>
+      </thead>
+      <tbody>${subjectRows}</tbody>
+    </table>
+
+    ${opts.overallGrade ? `
+    <div class="summary-box">
+      <div class="stat"><div class="stat-val">${opts.overallGrade}</div><div class="stat-lbl">एकूण श्रेणी</div></div>
+      ${opts.overallPercent != null ? `<div class="stat"><div class="stat-val">${opts.overallPercent}%</div><div class="stat-lbl">एकूण टक्केवारी</div></div>` : ""}
+      ${att ? `
+        <div class="stat"><div class="stat-val">${att.presentDays}</div><div class="stat-lbl">उपस्थित दिवस</div></div>
+        <div class="stat"><div class="stat-val">${att.absentDays}</div><div class="stat-lbl">अनुपस्थित</div></div>
+      ` : ""}
+      ${hw ? `<div class="stat"><div class="stat-val">${hw.completed}/${hw.total}</div><div class="stat-lbl">गृहपाठ पूर्ण</div></div>` : ""}
+    </div>` : ""}
+
+    ${opts.teacherComment ? `
+    <h2>शिक्षकाचा अभिप्राय</h2>
+    <div class="comment-box">${opts.teacherComment}</div>` : ""}
+
+    <div class="footer">
+      <p>शिक्षक स्वाक्षरी: <span class="signature-line"></span>&nbsp;&nbsp;&nbsp;
+         मुख्याध्यापक स्वाक्षरी: <span class="signature-line"></span>&nbsp;&nbsp;&nbsp;
+         तारीख: ${new Date().toLocaleDateString("mr-IN")}</p>
+    </div>`;
+
+  printHtml(html, `pragati-pustika-${String(p.roll || "student")}`);
 }
 
-const statusLetter = (s: string) => {
+// ── Monthly Class Attendance PDF ──────────────────────────────────────────────
+
+const statusLabel = (s: string) => {
   if (s === "present") return "P";
   if (s === "absent") return "A";
   if (s === "late") return "L";
+  return "";
+};
+const statusColor = (s: string) => {
+  if (s === "P") return "color:#16a34a;font-weight:700";
+  if (s === "A") return "color:#dc2626;font-weight:700";
+  if (s === "L") return "color:#d97706;font-weight:700";
   return "";
 };
 
@@ -139,10 +212,6 @@ function ymdKey(d: string | Date): string {
   return dt.toISOString().slice(0, 10);
 }
 
-/**
- * Monthly class attendance PDF.
- * Structure: Blank cover page | Filled attendance data page(s) | Blank summary/signature last page
- */
 export function downloadClassMonthlyAttendancePdf(opts: {
   ym: string;
   className: string;
@@ -153,134 +222,80 @@ export function downloadClassMonthlyAttendancePdf(opts: {
   const byStudent: Record<string, Record<string, string>> = {};
   for (const r of opts.records) {
     if (!byStudent[r.studentId]) byStudent[r.studentId] = {};
-    byStudent[r.studentId][ymdKey(r.date)] = statusLetter(r.status);
+    byStudent[r.studentId][ymdKey(r.date)] = statusLabel(r.status);
   }
 
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const margin = 10;
+  const dateHeaders = opts.dates.map(d => `<th style="min-width:22px;padding:4px 2px;font-size:8pt">${d.slice(-2)}</th>`).join("");
 
-  // ===== PAGE 1: BLANK COVER PAGE =====
-  doc.setFontSize(16);
-  doc.text("Upasthiti Patrak / Attendance Register", pageW / 2, 30, { align: "center" });
-  doc.setFontSize(12);
-  doc.text(`Varg / Class: ${opts.className}`, pageW / 2, 45, { align: "center" });
-  doc.text(`Mahina / Month: ${opts.ym}`, pageW / 2, 55, { align: "center" });
-  doc.text(
-    `Ekun Vidyarthi: ${opts.students.length}  |  Ekun Divas: ${opts.dates.length}`,
-    pageW / 2,
-    65,
-    { align: "center" }
-  );
-
-  // Blank table on cover page
-  const blankTableY = 80;
-  const bColW = [70, 40, 40];
-  const bHeaders = ["Shikshakache Nav / Teacher Name", "Swakshari / Signature", "Tarikh / Date"];
-  const bRowH = 9;
-  let bx = margin;
-  doc.setFontSize(8);
-  bHeaders.forEach((h, i) => {
-    doc.rect(bx, blankTableY, bColW[i], bRowH);
-    doc.text(h, bx + 2, blankTableY + 6);
-    bx += bColW[i];
-  });
-  for (let i = 1; i <= 5; i++) {
-    const ry = blankTableY + i * bRowH;
-    bx = margin;
-    bColW.forEach((cw) => {
-      doc.rect(bx, ry, cw, bRowH);
-      bx += cw;
-    });
-  }
-
-  // ===== INNER PAGE(S): FILLED ATTENDANCE DATA =====
-  doc.addPage();
-  let y = margin;
-  doc.setFontSize(11);
-  doc.text(`Upasthiti -- ${opts.className} -- ${opts.ym}`, margin, y + 6);
-  y += 10;
-
-  const dayLabels = opts.dates.map((d) => d.slice(-2));
-  const nameCol = 42;
-  const rollCol = 14;
-  const n = dayLabels.length;
-  const usable = pageW - nameCol - rollCol - 12;
-  const colW = Math.max(4, Math.min(5.5, usable / Math.max(n, 1)));
-
-  doc.setFontSize(7);
-  doc.text("Nav", margin, y);
-  doc.text("A.Kr.", margin + nameCol, y);
-  let x = margin + nameCol + rollCol;
-  for (let i = 0; i < dayLabels.length; i++) {
-    doc.text(dayLabels[i], x + i * colW, y, { align: "center" });
-  }
-  y += 4;
-  doc.setDrawColor(200);
-  doc.line(margin, y, pageW - margin, y);
-  y += 3;
-
-  for (const s of opts.students) {
-    if (y > pageH - 12) {
-      doc.addPage();
-      y = margin;
-    }
-    doc.text(doc.splitTextToSize(s.name, nameCol - 2)[0] || s.name, margin, y);
-    doc.text(String(s.roll), margin + nameCol, y);
+  const studentRows = opts.students.map((s, idx) => {
     const row = byStudent[s.id] || {};
-    for (let i = 0; i < opts.dates.length; i++) {
-      const cell = row[opts.dates[i]] || "";
-      doc.text(cell, x + i * colW, y, { align: "center" });
-    }
-    y += 5;
-  }
+    let present = 0, absent = 0, late = 0;
+    const cells = opts.dates.map(d => {
+      const v = row[d] || "";
+      if (v === "P") present++;
+      if (v === "A") absent++;
+      if (v === "L") late++;
+      return `<td style="text-align:center;font-size:8pt;padding:3px 2px;${statusColor(v)}">${v}</td>`;
+    }).join("");
+    const pct = opts.dates.length > 0 ? Math.round((present / opts.dates.length) * 100) : 0;
+    return `<tr style="background:${idx % 2 === 0 ? "#f8faff" : "white"}">
+      <td style="padding:4px 6px;font-size:9pt">${s.roll}</td>
+      <td style="padding:4px 6px;font-size:9pt;white-space:nowrap">${s.name}</td>
+      ${cells}
+      <td style="text-align:center;font-size:8.5pt;color:#16a34a;font-weight:700">${present}</td>
+      <td style="text-align:center;font-size:8.5pt;color:#dc2626;font-weight:700">${absent}</td>
+      <td style="text-align:center;font-size:8.5pt;color:#d97706">${late}</td>
+      <td style="text-align:center;font-size:8.5pt;font-weight:600">${pct}%</td>
+    </tr>`;
+  }).join("");
 
-  doc.setFontSize(7);
-  doc.text("P = Upasthit (Present), A = Anupasthit (Absent), L = Ushira (Late)", margin, pageH - 6);
+  const html = `
+    <div class="school-header">
+      <h2>वैनतेय प्राथमिक विद्या मंदिर</h2>
+      <p>मासिक उपस्थिती पत्रक</p>
+    </div>
 
-  // ===== LAST PAGE: BLANK SUMMARY / SIGNATURE PAGE =====
-  doc.addPage();
-  doc.setFontSize(12);
-  doc.text("Mahinaakher Saransh / Monthly Summary", pageW / 2, 20, { align: "center" });
-  doc.setFontSize(9);
+    <h1>📅 उपस्थिती पत्रक / Attendance Register</h1>
 
-  const sumY = 30;
-  const sumColW = [70, 30, 30, 40];
-  const sumHeaders = ["Vidyarthi Nav (Name)", "Upasthit (Present)", "Anupasthit (Absent)", "Shikshak Swakshari"];
-  const sumRowH = 9;
-  let sx = margin;
+    <div class="info-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px">
+      <div class="info-row"><span class="lbl">वर्ग:</span><span class="val">${opts.className}</span></div>
+      <div class="info-row"><span class="lbl">महिना:</span><span class="val">${opts.ym}</span></div>
+      <div class="info-row"><span class="lbl">एकूण विद्यार्थी:</span><span class="val">${opts.students.length}</span></div>
+    </div>
 
-  sumHeaders.forEach((h, i) => {
-    doc.rect(sx, sumY, sumColW[i], sumRowH);
-    doc.text(h, sx + 2, sumY + 6);
-    sx += sumColW[i];
-  });
+    <div style="overflow-x:auto">
+      <table style="font-size:9pt">
+        <thead>
+          <tr>
+            <th style="padding:6px 8px">रोल</th>
+            <th style="padding:6px 8px">नाव</th>
+            ${dateHeaders}
+            <th style="padding:6px 4px;color:#16a34a">P</th>
+            <th style="padding:6px 4px;color:#dc2626">A</th>
+            <th style="padding:6px 4px;color:#d97706">L</th>
+            <th style="padding:6px 4px">%</th>
+          </tr>
+        </thead>
+        <tbody>${studentRows}</tbody>
+      </table>
+    </div>
 
-  opts.students.forEach((s, si) => {
-    const ry = sumY + (si + 1) * sumRowH;
-    if (ry + sumRowH > pageH - 25) return;
-    sx = margin;
-    const row = byStudent[s.id] || {};
-    const present = Object.values(row).filter((v) => v === "P").length;
-    const absent = Object.values(row).filter((v) => v === "A").length;
-    const vals = [s.name, String(present), String(absent), ""];
-    vals.forEach((v, i) => {
-      doc.rect(sx, ry, sumColW[i], sumRowH);
-      if (v) doc.text(v.slice(0, 25), sx + 2, ry + 6);
-      sx += sumColW[i];
-    });
-  });
+    <p style="margin-top:10px;font-size:9pt;color:#555">
+      P = उपस्थित (Present) &nbsp;|&nbsp; A = अनुपस्थित (Absent) &nbsp;|&nbsp; L = उशिरा (Late)
+    </p>
 
-  // Signature section at bottom of last page
-  const sigY = pageH - 25;
-  doc.setFontSize(9);
-  doc.text("Mukhyadhyapak Swakshari: _____________________", margin, sigY);
-  doc.text("Shikshak Swakshari: _____________________", pageW / 2 - 20, sigY);
-  doc.text("Tarikh: ________________", pageW - margin - 55, sigY);
+    <div class="footer" style="margin-top:40px">
+      <p>
+        शिक्षक स्वाक्षरी: <span class="signature-line"></span>&nbsp;&nbsp;&nbsp;
+        मुख्याध्यापक स्वाक्षरी: <span class="signature-line"></span>&nbsp;&nbsp;&nbsp;
+        तारीख: ${new Date().toLocaleDateString("mr-IN")}
+      </p>
+    </div>`;
 
-  doc.save(`attendance-${opts.ym}-${opts.className.replace(/\s/g, "_")}.pdf`);
+  printHtml(html, `upasthiti-${opts.ym}-${opts.className.replace(/\s/g, "_")}`);
 }
+
+// ── Personal Monthly Attendance (Parent/Student) ──────────────────────────────
 
 export function downloadPersonalAttendanceMonthPdf(opts: {
   ym: string;
@@ -288,31 +303,56 @@ export function downloadPersonalAttendanceMonthPdf(opts: {
   roll: string;
   rows: Array<{ date: string; status: string }>;
 }): void {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  let y = 14;
-  const add = (t: string, sz = 10) => {
-    doc.setFontSize(sz);
-    doc.text(t, 14, y);
-    y += sz * 0.5;
-  };
-  add("Masik Upasthiti", 14);
-  add(`${opts.studentName} (A.Kr. ${opts.roll}) -- ${opts.ym}`, 10);
-  y += 4;
-  doc.setFontSize(10);
-  for (const r of opts.rows) {
-    const label =
-      r.status === "present"
-        ? "Upasthit"
-        : r.status === "absent"
-        ? "Anupasthit"
-        : r.status === "late"
-        ? "Ushira"
-        : r.status;
-    add(`${r.date}: ${label}`);
-    if (y > 270) {
-      doc.addPage();
-      y = 14;
-    }
-  }
-  doc.save(`attendance-${opts.ym}-${String(opts.roll)}.pdf`);
+  let present = 0, absent = 0, late = 0;
+
+  const tableRows = opts.rows.map((r, i) => {
+    const lbl = r.status === "present" ? "उपस्थित" : r.status === "absent" ? "अनुपस्थित" : r.status === "late" ? "उशिरा" : r.status;
+    const color = r.status === "present" ? "#16a34a" : r.status === "absent" ? "#dc2626" : "#d97706";
+    if (r.status === "present") present++;
+    if (r.status === "absent") absent++;
+    if (r.status === "late") late++;
+    return `<tr style="background:${i % 2 === 0 ? "#f8faff" : "white"}">
+      <td style="padding:6px 10px">${r.date}</td>
+      <td style="padding:6px 10px;color:${color};font-weight:600">${lbl}</td>
+    </tr>`;
+  }).join("");
+
+  const total = opts.rows.length;
+  const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+
+  const html = `
+    <div class="school-header">
+      <h2>वैनतेय प्राथमिक विद्या मंदिर</h2>
+      <p>वैयक्तिक मासिक उपस्थिती</p>
+    </div>
+
+    <h1>📅 मासिक उपस्थिती — ${opts.ym}</h1>
+
+    <div class="info-grid" style="margin-bottom:16px">
+      <div class="info-row"><span class="lbl">विद्यार्थी:</span><span class="val">${opts.studentName}</span></div>
+      <div class="info-row"><span class="lbl">अनु. क्र.:</span><span class="val">${opts.roll}</span></div>
+    </div>
+
+    <div class="summary-box">
+      <div class="stat"><div class="stat-val" style="color:#16a34a">${present}</div><div class="stat-lbl">उपस्थित</div></div>
+      <div class="stat"><div class="stat-val" style="color:#dc2626">${absent}</div><div class="stat-lbl">अनुपस्थित</div></div>
+      <div class="stat"><div class="stat-val" style="color:#d97706">${late}</div><div class="stat-lbl">उशिरा</div></div>
+      <div class="stat"><div class="stat-val">${pct}%</div><div class="stat-lbl">उपस्थिती %</div></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>तारीख</th><th>स्थिती</th></tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+
+    <div class="footer">
+      <p>
+        पालक स्वाक्षरी: <span class="signature-line"></span>&nbsp;&nbsp;&nbsp;
+        तारीख: ${new Date().toLocaleDateString("mr-IN")}
+      </p>
+    </div>`;
+
+  printHtml(html, `upasthiti-${opts.ym}-${opts.roll}`);
 }

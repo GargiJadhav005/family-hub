@@ -1,41 +1,37 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Users, Calendar, FileText, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Users, Calendar, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiCall } from '@/lib/api';
-import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
 
-  const { data: studentsData } = useQuery({
-    queryKey: ['teacher-students'],
-    queryFn: () => apiCall('/students'),
+  // Single efficient dashboard summary endpoint
+  const { data: dashData, isLoading: dashLoading } = useQuery({
+    queryKey: ['teacher-dashboard'],
+    queryFn: () => apiCall('/teacher/dashboard'),
   });
 
+  // Meetings still fetched separately as they need real-time data
   const { data: meetingsData } = useQuery({
     queryKey: ['teacher-meetings'],
     queryFn: () => apiCall('/meetings'),
   });
 
-  const { data: homeworkData } = useQuery({
-    queryKey: ['teacher-homework-dash'],
-    queryFn: () => apiCall('/homework'),
-  });
-
-  const students: any[] = studentsData?.students ?? [];
+  const students: any[] = dashData?.recentStudents ?? [];
+  const studentCount: number = dashData?.studentCount ?? 0;
+  const homeworkCount: number = dashData?.homeworkCount ?? 0;
   const meetings: any[] = meetingsData?.meetings ?? [];
-  const homework: any[] = homeworkData?.homework ?? [];
   const scheduledMeetings = meetings.filter((m: any) => m.status === 'नियोजित');
-  const pendingHomework = homework.filter((h: any) => !h.completed);
 
   const statCards = [
     {
       label: 'एकूण विद्यार्थी',
-      value: String(students.length),
+      value: dashLoading ? '…' : String(studentCount),
       icon: Users,
       color: 'text-primary',
       trend: `${user?.meta?.class || ''} वर्ग`,
@@ -48,8 +44,8 @@ export default function TeacherDashboard() {
       trend: 'पालक-शिक्षक सभा',
     },
     {
-      label: 'प्रलंबित गृहपाठ',
-      value: String(pendingHomework.length),
+      label: 'एकूण गृहपाठ',
+      value: dashLoading ? '…' : String(homeworkCount),
       icon: FileText,
       color: 'text-warning',
       trend: 'सक्रिय असाइनमेंट',

@@ -23,6 +23,7 @@ const LoadingSpinner = () => (
 // Public Pages - Lazy loaded
 const Index = lazy(() => import("@/pages/Index"));
 const Login = lazy(() => import("@/pages/Login"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const Campus = lazy(() => import("@/pages/Campus"));
 const Activities = lazy(() => import("@/pages/Activities"));
 const Admissions = lazy(() => import("@/pages/Admissions"));
@@ -40,6 +41,7 @@ const TeacherEnrollDetail = lazy(() => import("@/pages/teacher/TeacherEnrollDeta
 const TeacherHomework = lazy(() => import("@/pages/teacher/TeacherHomework"));
 const TeacherAnalytics = lazy(() => import("@/pages/teacher/TeacherAnalytics"));
 const TeacherQuiz = lazy(() => import("@/pages/teacher/TeacherQuiz"));
+const TeacherLMS = lazy(() => import("@/pages/teacher/TeacherLMS"));
 
 // Parent - Lazy loaded
 const ParentLayout = lazy(() => import("@/components/ParentLayout"));
@@ -92,6 +94,7 @@ function App() {
                 {/* PUBLIC */}
                 <Route path="/" element={<Suspense fallback={<LoadingSpinner />}><Index /></Suspense>} />
                 <Route path="/login" element={<Suspense fallback={<LoadingSpinner />}><Login /></Suspense>} />
+                <Route path="/forgot-password" element={<Suspense fallback={<LoadingSpinner />}><ForgotPassword /></Suspense>} />
                 <Route path="/campus" element={<Suspense fallback={<LoadingSpinner />}><Campus /></Suspense>} />
                 <Route path="/activities" element={<Suspense fallback={<LoadingSpinner />}><Activities /></Suspense>} />
                 <Route path="/admissions" element={<Suspense fallback={<LoadingSpinner />}><Admissions /></Suspense>} />
@@ -108,6 +111,7 @@ function App() {
                   <Route path="analytics" element={<Suspense fallback={<LoadingSpinner />}><TeacherAnalytics /></Suspense>} />
                   <Route path="meetings" element={<Suspense fallback={<LoadingSpinner />}><TeacherMeetings /></Suspense>} />
                   <Route path="quiz" element={<Suspense fallback={<LoadingSpinner />}><TeacherQuiz /></Suspense>} />
+                  <Route path="lms" element={<Suspense fallback={<LoadingSpinner />}><TeacherLMS /></Suspense>} />
                 </Route>
 
                 {/* PARENT */}
@@ -134,8 +138,11 @@ function App() {
                   <Route path="announcements" element={<Suspense fallback={<LoadingSpinner />}><AdminAnnouncements /></Suspense>} />
                 </Route>
 
-                {/* FALLBACK */}
+                {/* FALLBACK AND ERRORS */}
                 <Route path="/404" element={<Suspense fallback={<LoadingSpinner />}><NotFound /></Suspense>} />
+                <Route path="/error" element={<Suspense fallback={<LoadingSpinner />}><NotFound /></Suspense>} />
+                <Route path="/unauthorized" element={<Suspense fallback={<LoadingSpinner />}><NotFound /></Suspense>} />
+                <Route path="/forbidden" element={<Suspense fallback={<LoadingSpinner />}><NotFound /></Suspense>} />
                 <Route path="*" element={<Navigate to="/404" replace />} />
               </Routes>
             </ErrorBoundary>

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Score, Student } from "../models";
+import { Score, Student, Attendance } from "../models";
 import { AuthRequest } from "../middleware/auth";
 import { getMetaValue } from "../utils/auth";
 import { z } from "zod";
@@ -158,5 +158,111 @@ export async function addScore(req: AuthRequest, res: Response): Promise<void> {
       error: "Failed to create score",
       details: process.env.NODE_ENV === 'development' ? err?.message : undefined
     });
+  }
+}
+
+/**
+ * GET /api/scores/analytics
+ * Returns pre-aggregated analytics for the teacher's class
+ */
+export async function getAnalytics(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const teacherClass = getMetaValue(req.user.meta, "class");
+    const students = await Student.find(
+      teacherClass ? { className: teacherClass } : {}
+    ).select("_id name roll className").lean();
+
+    const studentIds = students.map((s: any) => s._id);
+
+    const scores = await Score.find({ studentId: { $in: studentIds } })
+      .sort({ date: -1 })
+      .lean();
+
+    // ── Subject averages ──────────────────────────────────────
+    const bySubject: Record<string, { total: number; count: number }> = {};
+    const monthly: Record<string, { total: number; count: number }> = {};
+
+    for (const s of scores) {
+      if (!bySubject[s.subject]) bySubject[s.subject] = { total: 0, count: 0 };
+      bySubject[s.subject].total += s.scorePercent;
+      bySubject[s.subject].count += 1;
+
+      const month = new Date(s.date).toLocaleDateString("en", { month: "short", year: "2-digit" });
+      if (!monthly[month]) monthly[month] = { total: 0, count: 0 };
+      monthly[month].total += s.scorePercent;
+      monthly[month].count += 1;
+    }
+
+    const subjectPerformance = Object.entries(bySubject).map(([subject, v]) => ({
+      subject,
+      avg: Math.round(v.total / v.count),
+    }));
+
+    const monthlyTrend = Object.entries(monthly).map(([month, v]) => ({
+      month,
+      avg: Math.round(v.total / v.count),
+    }));
+
+    // ── Weak / strong areas ───────────────────────────────────
+    const weakAreas = subjectPerformance
+      .filter((s) => s.avg < 75)
+      .map((s) => ({
+        subject: s.subject,
+        topic: "पुनरावृत्ती आवश्यक",
+        severity: s.avg < 60 ? "high" : "medium",
+        avg: s.avg,
+      }));
+
+    const strongAreas = subjectPerformance
+      .filter((s) => s.avg >= 85)
+      .map((s) => ({
+        subject: s.subject,
+        topic: "उत्कृष्ट कामगिरी",
+        percentage: `${s.avg}%`,
+      }));
+
+    // ── Attendance summary ────────────────────────────────────
+    const now = new Date();
+    const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const toDate = now.toISOString().slice(0, 10);
+
+    const attRecords = await Attendance.find({
+      studentId: { $in: studentIds },
+      date: { $gte: fromDate, $lte: toDate },
+    }).lean();
+
+    const attByStudent: Record<string, { present: number; total: number }> = {};
+    for (const a of attRecords) {
+      const sid = a.studentId.toString();
+      if (!attByStudent[sid]) attByStudent[sid] = { present: 0, total: 0 };
+      attByStudent[sid].total += 1;
+      if (a.status === "present") attByStudent[sid].present += 1;
+    }
+
+    const totalDays = Object.values(attByStudent).reduce((m, v) => Math.max(m, v.total), 0);
+    const avgAttendance = totalDays > 0
+      ? Math.round(
+          Object.values(attByStudent).reduce((s, v) => s + (v.present / v.total) * 100, 0) /
+          Object.keys(attByStudent).length
+        )
+      : null;
+
+    res.json({
+      subjectPerformance,
+      monthlyTrend,
+      weakAreas,
+      strongAreas,
+      totalStudents: students.length,
+      avgAttendance,
+      teacherClass: teacherClass || null,
+    });
+  } catch (err: any) {
+    console.error("getAnalytics error:", err);
+    res.status(500).json({ error: "Analytics failed" });
   }
 }

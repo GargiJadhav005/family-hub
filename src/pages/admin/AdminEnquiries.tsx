@@ -52,9 +52,6 @@ export default function AdminEnquiries() {
 
   const enquiries: Enquiry[] = data?.enquiries ?? [];
 
-  if (isLoading) return <div className="text-center py-8">लोड होत आहे...</div>;
-  if (error) return <div className="text-center py-8 text-destructive">चौकशी लोड करता आले नाही</div>;
-
   const markReadMut = useMutation({
     mutationFn: (id: string) =>
       apiCall(`/admin/enquiries/${id}/mark-read`, { method: 'PATCH' }),
@@ -83,6 +80,9 @@ export default function AdminEnquiries() {
     },
     onError: () => toast.error('उत्तर पाठवणे अयशस्वी'),
   });
+
+  if (isLoading) return <div className="text-center py-8">लोड होत आहे...</div>;
+  if (error) return <div className="text-center py-8 text-destructive">चौकशी लोड करता आले नाही</div>;
 
   const newCount = enquiries.filter((e) => e.status === 'new').length;
 

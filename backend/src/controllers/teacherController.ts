@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User, Student } from "../models";
+import { User, Student, Homework, Score, Attendance } from "../models";
 import { AuthRequest } from "../middleware/auth";
 import { hashPassword, toClientUser } from "../utils/auth";
 import { getMetaValue } from "../utils/auth";
@@ -28,6 +28,12 @@ const EnrollSchema = z.object({
   motherTongue: z.string().optional(),
   medium: z.string().optional(),
   udiseNumber: z.string().optional(),
+  // Teacher-provided emails (optional — system will generate if omitted)
+  studentEmail: z.string().email().optional().or(z.literal('')),
+  parentEmail: z.string().email().optional().or(z.literal('')),
+  // Teacher-provided password (optional — system will generate if omitted)
+  studentPassword: z.string().min(4).optional().or(z.literal('')),
+  parentPassword: z.string().min(4).optional().or(z.literal('')),
   mailingAddress: z
     .object({
       line1: z.string().optional(),
@@ -48,6 +54,43 @@ const EnrollSchema = z.object({
 
 function generatePassword(): string {
   return "Pass" + Math.floor(1000 + Math.random() * 9000);
+}
+
+/**
+ * GET /api/teacher/dashboard
+ * Returns aggregated stats for the teacher dashboard in one call
+ */
+export async function getTeacherDashboard(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user || req.user.role !== "teacher") {
+      res.status(403).json({ error: "Teachers only" });
+      return;
+    }
+
+    const teacherClass = getMetaValue(req.user.meta, "class");
+    const query = teacherClass ? { className: teacherClass } : {};
+
+    const [studentCount, homeworkCount, recentStudents] = await Promise.all([
+      Student.countDocuments(query),
+      Homework.countDocuments({ createdByTeacherId: req.user._id }),
+      Student.find(query).select("name roll className").sort({ roll: 1 }).limit(8).lean(),
+    ]);
+
+    res.json({
+      studentCount,
+      homeworkCount,
+      recentStudents: recentStudents.map((s: any) => ({
+        id: s._id.toString(),
+        name: s.name,
+        roll: s.roll,
+        className: s.className,
+      })),
+      teacherClass: teacherClass || null,
+    });
+  } catch (err: any) {
+    console.error("TeacherDashboard error:", err);
+    res.status(500).json({ error: "Dashboard error" });
+  }
 }
 
 export async function enrollStudent(req: AuthRequest, res: Response): Promise<void> {
@@ -92,6 +135,10 @@ export async function enrollStudent(req: AuthRequest, res: Response): Promise<vo
       udiseNumber = "",
       mailingAddress,
       emergencyContact,
+      studentEmail: studentEmailInput,
+      parentEmail: parentEmailInput,
+      studentPassword: studentPasswordInput,
+      parentPassword: parentPasswordInput,
     } = body;
 
     let rollNum: string;
@@ -107,16 +154,15 @@ export async function enrollStudent(req: AuthRequest, res: Response): Promise<vo
       rollNum = String(existingCount + 1).padStart(2, "0");
     }
 
-    const baseEmail = name
-      .toLowerCase()
-      .replace(/\s/g, ".")
-      .replace(/[^a-z.]/g, "");
+    // Use teacher-provided emails or generate fallbacks
     const timestamp = Date.now().toString(36).slice(-4);
-    const studentEmail = `${baseEmail}.${timestamp}@school.edu`;
-    const parentEmail = `parent.${baseEmail}.${timestamp}@school.edu`;
+    const baseEmail = name.toLowerCase().replace(/\s/g, ".").replace(/[^a-z.]/g, "");
+    const studentEmail = studentEmailInput?.trim() || `${baseEmail}.${timestamp}@school.edu`;
+    const parentEmail = parentEmailInput?.trim() || `parent.${baseEmail}.${timestamp}@school.edu`;
 
-    const studentPasswordPlain = generatePassword();
-    const parentPasswordPlain = generatePassword();
+    // Use teacher-provided passwords or generate fallbacks
+    const studentPasswordPlain = studentPasswordInput?.trim() || generatePassword();
+    const parentPasswordPlain = parentPasswordInput?.trim() || generatePassword();
 
     const studentHash = await hashPassword(studentPasswordPlain);
     const parentHash = await hashPassword(parentPasswordPlain);

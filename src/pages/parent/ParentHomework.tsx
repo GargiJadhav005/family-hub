@@ -49,6 +49,20 @@ export default function ParentHomework() {
 
   const pending = homework.filter((h) => h.status !== 'completed').length;
 
+  const handleToggleStatus = async (id: string, currentStatus?: string) => {
+    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    try {
+      await apiCall(`/homework/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      setHomework(prev => prev.map(h => h.id === id ? { ...h, status: newStatus } : h));
+      toast.success(newStatus === 'completed' ? 'गृहपाठ पूर्ण झाला!' : 'गृहपाठ प्रलंबित वर परत आणला');
+    } catch (err) {
+      toast.error('अद्यतनित करण्यात त्रुटी आली');
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
@@ -86,7 +100,8 @@ export default function ParentHomework() {
             <Button
               variant={h.status === 'completed' ? 'ghost' : 'outline'}
               size="sm"
-              className={h.status === 'completed' ? 'text-success' : ''}
+              className={h.status === 'completed' ? 'text-success hover:text-success/80 hover:bg-success/10' : ''}
+              onClick={() => handleToggleStatus(h.id, h.status)}
             >
               {h.status === 'completed' ? (
                 <><CheckCircle2 className="w-4 h-4 mr-1" /> पूर्ण झाले</>

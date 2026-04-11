@@ -19,6 +19,8 @@ import adminRoutes from "./routes/adminRoutes";
 import enquiryRoutes from "./routes/enquiryRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import reportCardRoutes from "./routes/reportCardRoutes";
+import { getCourses } from "./controllers/lmsController";
+import { authMiddleware, requireRole } from "./middleware/auth";
 
 
 const app: Express = express();
@@ -58,6 +60,9 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/enquiry", enquiryRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/report-cards", reportCardRoutes);
+
+// LMS inline route (avoids ESM resolution issues with tsx)
+app.get("/api/lms", authMiddleware, requireRole("teacher", "student", "parent", "admin"), getCourses);
 
 
 // 404 handler

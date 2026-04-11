@@ -11,7 +11,13 @@
         "lint": "eslint src/",
         "typecheck": "tsc --noEmit",
         "seed:admin": "tsx src/scripts/seedAdmin.ts",
-        "seed:real": "tsx src/scripts/seedRealData.ts"
+        "seed:real": "tsx src/scripts/seedRealData.ts",
+        "seed": "tsx src/scripts/seed.ts",
+        "test": "vitest run",
+        "test:unit": "vitest run src/tests/auth.unit.test.ts",
+        "test:integration": "vitest run src/tests/api.integration.test.ts",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
@@ -28,9 +34,11 @@
         "@types/cors": "^2.8.19",
         "@types/express": "^4.17.21",
         "@types/jsonwebtoken": "^9.0.7",
-        "@types/nodemailer": "^6.4.14",
         "@types/node": "^20.10.5",
+        "@types/nodemailer": "^6.4.14",
+        "@vitest/coverage-v8": "^1.6.1",
         "tsx": "^4.16.2",
-        "typescript": "^5.3.3"
+        "typescript": "^5.3.3",
+        "vitest": "^1.6.1"
     }
 }

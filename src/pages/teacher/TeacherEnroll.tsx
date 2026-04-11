@@ -41,7 +41,7 @@ export default function TeacherEnroll() {
     parentPassword: string;
   } | null>(null);
 
-  const [form, setForm] = useState<EnrollPayload>({
+  const [form, setForm] = useState<EnrollPayload & { studentEmail?: string; parentEmail?: string; studentPassword?: string; parentPassword?: string }>({
     name: '',
     parentName: '',
     className: user?.meta?.class || '',
@@ -62,6 +62,10 @@ export default function TeacherEnroll() {
     motherTongue: '',
     medium: '',
     udiseNumber: '',
+    studentEmail: '',
+    parentEmail: '',
+    studentPassword: '',
+    parentPassword: '',
     mailingAddress: { line1: '', line2: '', city: '', state: '', pincode: '' },
     emergencyContact: { name: '', phone: '', relation: '' },
     alternateGuardianName: '',
@@ -78,8 +82,19 @@ export default function TeacherEnroll() {
     queryFn: () => apiCall('/students?limit=100'),
   });
 
+  // Fetch existing report cards to highlight students  
+  const { data: rcData } = useQuery({
+    queryKey: ['teacher-report-cards-ids'],
+    queryFn: () => apiCall('/report-cards'),
+  });
+
   const students: { id: string; name: string; roll: string; class?: string }[] =
     data?.students ?? [];
+
+  // Build set of student IDs that have a report card
+  const reportCardStudentIds = new Set<string>(
+    (rcData?.reportCards ?? []).map((rc: any) => rc.studentId?.toString())
+  );
 
   const resetForm = () => {
     setForm({
@@ -103,6 +118,10 @@ export default function TeacherEnroll() {
       motherTongue: '',
       medium: '',
       udiseNumber: '',
+      studentEmail: '',
+      parentEmail: '',
+      studentPassword: '',
+      parentPassword: '',
       mailingAddress: { line1: '', line2: '', city: '', state: '', pincode: '' },
       emergencyContact: { name: '', phone: '', relation: '' },
       alternateGuardianName: '',
@@ -431,6 +450,48 @@ export default function TeacherEnroll() {
                 </div>
               </div>
               <div className="space-y-1 sm:col-span-2">
+                <Label className="text-primary font-semibold">लॉगिन माहिती (ऐच्छिक)</Label>
+                <p className="text-xs text-muted-foreground mb-2">रिकामे सोडल्यास प्रणाली आपोआप ईमेल व पासवर्ड तयार करेल</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">विद्यार्थी ईमेल</Label>
+                    <Input
+                      type="email"
+                      placeholder="student@example.com"
+                      value={(form as any).studentEmail || ''}
+                      onChange={(e) => setForm((f) => ({ ...f, studentEmail: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">विद्यार्थी पासवर्ड</Label>
+                    <Input
+                      type="text"
+                      placeholder="किमान 4 अक्षरे"
+                      value={(form as any).studentPassword || ''}
+                      onChange={(e) => setForm((f) => ({ ...f, studentPassword: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">पालक ईमेल</Label>
+                    <Input
+                      type="email"
+                      placeholder="parent@example.com (विद्यार्थ्यासारखाच चालेल)"
+                      value={(form as any).parentEmail || ''}
+                      onChange={(e) => setForm((f) => ({ ...f, parentEmail: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">पालक पासवर्ड</Label>
+                    <Input
+                      type="text"
+                      placeholder="किमान 4 अक्षरे"
+                      value={(form as any).parentPassword || ''}
+                      onChange={(e) => setForm((f) => ({ ...f, parentPassword: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
                 <Label>टिपा</Label>
                 <Textarea
                   rows={2}
@@ -493,8 +554,8 @@ export default function TeacherEnroll() {
               </tr>
             </thead>
             <tbody>
-              {students.map((s) => (
-                <tr key={s.id} className="border-b border-border/50 hover:bg-muted/30">
+              {students.map((s: any) => (
+                <tr key={s.id} className={`border-b border-border/50 hover:bg-muted/30 ${reportCardStudentIds.has(s.id) ? 'bg-success/5' : ''}`}>
                   <td className="p-3 text-muted-foreground font-mono">{s.roll}</td>
                   <td className="p-3">
                     <Link
@@ -503,6 +564,9 @@ export default function TeacherEnroll() {
                     >
                       {s.name}
                     </Link>
+                    {reportCardStudentIds.has(s.id) && (
+                      <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-success/20 text-success font-medium">✓ प्रगती पुस्तिका</span>
+                    )}
                   </td>
                   <td className="p-2">
                     <Button variant="ghost" size="icon" className="h-8 w-8" asChild>

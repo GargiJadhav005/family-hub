@@ -94,9 +94,7 @@ export default function AdminUsers() {
 
   const users: any[] = data?.users ?? [];
 
-  if (isLoading) return <div className="text-center py-8">लोड होत आहे...</div>;
-  if (error) return <div className="text-center py-8 text-destructive">वापरकर्ते लोड करता आले नाही</div>;
-
+  // ALL HOOKS must be called before any conditional returns
   const resetCreate = () => {
     setNewName('');
     setNewEmail('');
@@ -190,6 +188,10 @@ export default function AdminUsers() {
     studentFields.rollNumber.trim();
 
   const teacherParentValid = newName.trim() && newEmail.trim();
+
+  // ── Conditional returns AFTER all hooks ──────────────────────────────────────
+  if (isLoading) return <div className="text-center py-8">लोड होत आहे...</div>;
+  if (error) return <div className="text-center py-8 text-destructive">वापरकर्ते लोड करता आले नाही</div>;
 
   return (
     <div className="space-y-6">

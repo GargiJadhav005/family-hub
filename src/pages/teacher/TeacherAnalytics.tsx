@@ -1,6 +1,5 @@
-import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadarChart, PolarGrid, PolarAngleAxis, Radar, PolarRadiusAxis } from 'recharts';
-import { TrendingUp, AlertTriangle, Star, BookOpen } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Star, BookOpen, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { apiCall } from '@/lib/api';
@@ -8,54 +7,40 @@ import { apiCall } from '@/lib/api';
 export default function TeacherAnalytics() {
   const { user } = useAuth();
 
-  const { data: scoresData } = useQuery({
-    queryKey: ['analytics-scores'],
-    queryFn: () => apiCall('/scores'),
+  const { data: analyticsData, isLoading } = useQuery({
+    queryKey: ['teacher-analytics'],
+    queryFn: () => apiCall('/scores/analytics'),
   });
 
-  const scores: any[] = scoresData?.scores ?? [];
+  const subjectPerformance: { subject: string; avg: number }[] = analyticsData?.subjectPerformance ?? [];
+  const monthlyTrend: { month: string; avg: number }[] = analyticsData?.monthlyTrend ?? [];
+  const weakAreas: any[] = analyticsData?.weakAreas ?? [];
+  const strongAreas: any[] = analyticsData?.strongAreas ?? [];
+  const avgAttendance: number | null = analyticsData?.avgAttendance ?? null;
 
-  const subjectPerformance = useMemo(() => {
-    if (!scores.length) return [];
-    const bySubject: Record<string, { subject: string; total: number; count: number }> = {};
-    for (const s of scores) {
-      const pct = s.score ?? s.scorePercent ?? 0;
-      if (!bySubject[s.subject]) bySubject[s.subject] = { subject: s.subject, total: 0, count: 0 };
-      bySubject[s.subject].total += pct;
-      bySubject[s.subject].count += 1;
-    }
-    return Object.values(bySubject).map(v => ({ subject: v.subject, avg: Math.round(v.total / v.count) }));
-  }, [scores]);
+  // Build radar from real subject data with fallback values
+  const radarData = [
+    { area: 'गणित', value: subjectPerformance.find(s => s.subject === 'गणित')?.avg ?? 0 },
+    { area: 'मराठी', value: subjectPerformance.find(s => s.subject === 'मराठी')?.avg ?? 0 },
+    { area: 'इंग्रजी', value: subjectPerformance.find(s => s.subject === 'इंग्रजी')?.avg ?? 0 },
+    { area: 'विज्ञान', value: subjectPerformance.find(s => s.subject === 'विज्ञान')?.avg ?? 0 },
+    { area: 'परिसर', value: subjectPerformance.find(s => s.subject === 'परिसर अभ्यास')?.avg ?? 0 },
+    ...subjectPerformance.filter(s => !['गणित','मराठी','इंग्रजी','विज्ञान','परिसर अभ्यास'].includes(s.subject)).map(s => ({ area: s.subject, value: s.avg })),
+  ].filter(d => d.value > 0);
 
-  const radarData = useMemo(() => [
-    { area: 'गणित', value: subjectPerformance.find(s => s.subject === 'गणित')?.avg ?? 75 },
-    { area: 'मराठी', value: subjectPerformance.find(s => s.subject === 'मराठी')?.avg ?? 85 },
-    { area: 'इंग्रजी', value: subjectPerformance.find(s => s.subject === 'इंग्रजी')?.avg ?? 70 },
-    { area: 'विज्ञान', value: subjectPerformance.find(s => s.subject === 'विज्ञान')?.avg ?? 80 },
-    { area: 'परिसर', value: subjectPerformance.find(s => s.subject === 'परिसर अभ्यास')?.avg ?? 88 },
-    { area: 'सर्जनशीलता', value: 90 },
-  ], [subjectPerformance]);
+  const revisionTopics = weakAreas.map((area: any) => ({
+    subject: area.subject,
+    topic: area.topic,
+    reason: `सरासरी: ${area.avg}% — पुनरावृत्ती आवश्यक`,
+  }));
 
-  const weakAreas = useMemo(() => [
-    { subject: 'इंग्रजी', topic: 'Tenses (काळ)', students: 8, severity: 'high' as const },
-    { subject: 'गणित', topic: 'शब्द समस्या', students: 6, severity: 'medium' as const },
-    ...subjectPerformance.filter(s => s.avg < 75).map(s => ({ subject: s.subject, topic: 'पुनरावृत्ती आवश्यक', students: 10, severity: 'high' as const })),
-  ], [subjectPerformance]);
-
-  const strongAreas = useMemo(() => [
-    { subject: 'मराठी', topic: 'कविता वाचन', percentage: '९५%' },
-    { subject: 'परिसर अभ्यास', topic: 'पर्यावरण जागृती', percentage: '९२%' },
-    ...subjectPerformance.filter(s => s.avg >= 85).map(s => ({ subject: s.subject, topic: 'उत्कृष्ट कामगिरी', percentage: `${s.avg}%` })),
-  ], [subjectPerformance]);
-
-  const revisionTopics = useMemo(() =>
-    weakAreas.map(area => ({
-      subject: area.subject,
-      topic: area.topic,
-      reason: `${area.students} विद्यार्थ्यांना या विषयात अडचण आहे`,
-    })),
-    [weakAreas]
-  );
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">

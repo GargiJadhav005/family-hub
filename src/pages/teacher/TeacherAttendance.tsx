@@ -20,20 +20,49 @@ export default function TeacherAttendance() {
   const [monthYm, setMonthYm] = useState(ymNow);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  // Track which studentIds have 100% attendance this month
+  const [perfectAttendanceIds, setPerfectAttendanceIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [stuRes, attRes] = await Promise.all([
+      const ym = monthYm;
+      const [y, mo] = ym.split('-').map(Number);
+      const lastDay = new Date(y, mo, 0).getDate();
+      const fromDate = `${ym}-01`;
+      const toDate = `${ym}-${String(lastDay).padStart(2, '0')}`;
+
+      const [stuRes, attRes, monthAttRes] = await Promise.all([
         apiCall('/students?limit=200'),
         apiCall(`/attendance?date=${encodeURIComponent(date)}&limit=500`),
+        apiCall(`/attendance?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}&limit=5000`),
       ]);
       const students: any[] = stuRes.students ?? [];
       const attendance: any[] = attRes.attendance ?? attRes.records ?? [];
+      const monthAttendance: any[] = monthAttRes.attendance ?? monthAttRes.records ?? [];
+
+      // Build today's status map
       const byId: Record<string, string> = {};
       for (const a of attendance) {
         if (a.studentId) byId[a.studentId] = a.status;
       }
+
+      // Calculate perfect attendance: student has >= 15 records and ALL are 'present'
+      const monthByStudent: Record<string, string[]> = {};
+      for (const a of monthAttendance) {
+        const sid = a.studentId?.toString();
+        if (!sid) continue;
+        if (!monthByStudent[sid]) monthByStudent[sid] = [];
+        monthByStudent[sid].push(a.status);
+      }
+      const perfect = new Set<string>();
+      for (const [sid, statuses] of Object.entries(monthByStudent)) {
+        if (statuses.length >= 1 && statuses.every(s => s === 'present')) {
+          perfect.add(sid);
+        }
+      }
+      setPerfectAttendanceIds(perfect);
+
       setRows(
         students.map((s: any) => ({
           id: s.id,
@@ -48,7 +77,7 @@ export default function TeacherAttendance() {
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [date, monthYm]);
 
   useEffect(() => {
     load();
@@ -175,9 +204,14 @@ export default function TeacherAttendance() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30">
+              <tr key={r.id} className={`border-b border-border/50 hover:bg-secondary/30 ${perfectAttendanceIds.has(r.id) ? 'bg-success/5' : ''}`}>
                 <td className="p-3 text-sm">{r.roll}</td>
-                <td className="p-3 text-sm font-medium">{r.name}</td>
+                <td className="p-3 text-sm font-medium">
+                  {r.name}
+                  {perfectAttendanceIds.has(r.id) && (
+                    <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-success/20 text-success font-medium">★ पूर्ण हजेरी</span>
+                  )}
+                </td>
                 <td className="p-3 text-center">
                   <span
                     className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${

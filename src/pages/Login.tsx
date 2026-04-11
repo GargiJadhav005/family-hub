@@ -143,9 +143,9 @@ export default function Login() {
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-widest">
                   पासवर्ड
                 </label>
-                <button type="button" className="text-[11px] text-slate-400 hover:text-indigo-600 transition-colors">
+                <Link to="/forgot-password" className="text-[11px] text-slate-400 hover:text-indigo-600 transition-colors">
                   विसरलात?
-                </button>
+                </Link>
               </div>
               <div className="relative">
                 <Input
