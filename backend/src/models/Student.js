@@ -27,6 +27,21 @@ const studentSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+    },
+    passwordHash: {
+      type: String,
+      default: '',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
     roll: {
       type: String,
       required: true,
@@ -39,7 +54,8 @@ const studentSchema = new mongoose.Schema(
     },
     parentName: {
       type: String,
-      required: true,
+      default: '',
+      trim: true,
     },
     motherName: { type: String, default: '', trim: true },
     fatherName: { type: String, default: '', trim: true },
@@ -51,23 +67,23 @@ const studentSchema = new mongoose.Schema(
     },
     parentEmail: {
       type: String,
-      required: true,
+      default: '',
       lowercase: true,
     },
     studentUserId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
     },
     parentUserId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
     },
     createdByTeacherId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
     },
     dateOfBirth: { type: String, default: '', trim: true },
     gender: {

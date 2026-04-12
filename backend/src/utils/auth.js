@@ -71,6 +71,7 @@ function getMetaValue(meta, key) {
  * @returns {Promise<string>} - Generated unique username
  */
 async function generateUsername(name) {
+  const { Student } = require('../models');
   const parts = name.toLowerCase().trim().split(/\s+/);
   
   // Create base username: firstname.lastname or just firstname
@@ -81,11 +82,17 @@ async function generateUsername(name) {
   // Remove special characters, keep only alphanumeric and dots
   baseUsername = baseUsername.replace(/[^a-z0-9.]/g, '');
   
-  // Check if username exists
+  // Ensure we have something valid
+  if (!baseUsername) baseUsername = 'user';
+  
+  // Check if username exists in BOTH User and Student collections
   let username = baseUsername;
   let counter = 1;
   
-  while (await User.findOne({ username })) {
+  while (
+    (await User.findOne({ username })) ||
+    (await Student.findOne({ username }))
+  ) {
     username = `${baseUsername}${counter}`;
     counter++;
   }

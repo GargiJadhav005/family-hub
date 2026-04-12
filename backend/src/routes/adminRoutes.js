@@ -3,6 +3,7 @@ const { authMiddleware, requireRole } = require("../middleware/auth");
 const {
   getDashboard,
   getAllUsers,
+  getAllStudents,
   createUser,
   updateUser,
   deleteUser,
@@ -28,6 +29,8 @@ router.post("/users", createUser);
 router.patch("/users/:userId", updateUser);
 router.delete("/users/:userId", deleteUser);
 router.patch("/users/:userId/reset-password", resetUserPassword);
+
+router.get("/students", getAllStudents);
 
 router.get("/announcements", getAnnouncements);
 router.post("/announcements", createAnnouncement);

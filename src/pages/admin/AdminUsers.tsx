@@ -90,9 +90,17 @@ export default function AdminUsers() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => apiCall('/admin/users?limit=100'),
+    refetchOnWindowFocus: true,
   });
 
-  const users: any[] = data?.users ?? [];
+  const { data: studentsData, isLoading: studentsLoading } = useQuery({
+    queryKey: ['admin-students'],
+    queryFn: () => apiCall('/admin/students?limit=100'),
+    refetchOnWindowFocus: true,
+  });
+
+  const users: any[] = (data as any)?.users ?? [];
+  const students: any[] = (studentsData as any)?.students ?? [];
 
   // ALL HOOKS must be called before any conditional returns
   const resetCreate = () => {
@@ -148,10 +156,15 @@ export default function AdminUsers() {
           : 'वापरकर्ता तयार'
       );
       qc.invalidateQueries({ queryKey: ['admin-users'] });
+      qc.invalidateQueries({ queryKey: ['admin-students'] });
+      qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
       setCreateOpen(false);
       resetCreate();
     },
-    onError: () => toast.error('तयार करणे अयशस्वी'),
+    onError: (error: any) => {
+      console.error('Create user error:', error);
+      toast.error(error?.message || 'तयार करणे अयशस्वी');
+    },
   });
 
   const patchMut = useMutation({
@@ -163,6 +176,7 @@ export default function AdminUsers() {
     onSuccess: () => {
       toast.success('अद्यतन केले');
       qc.invalidateQueries({ queryKey: ['admin-users'] });
+      qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
       setEditUser(null);
     },
     onError: () => toast.error('अद्यतन अयशस्वी'),
@@ -173,6 +187,8 @@ export default function AdminUsers() {
     onSuccess: () => {
       toast.success('हटवले');
       qc.invalidateQueries({ queryKey: ['admin-users'] });
+      qc.invalidateQueries({ queryKey: ['admin-students'] });
+      qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
       setDeleteId(null);
     },
     onError: (e: Error) => toast.error(e.message || 'हटवणे अयशस्वी'),
@@ -407,6 +423,7 @@ export default function AdminUsers() {
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <th className="text-left p-3">नाव</th>
+              <th className="text-left p-3">वापरकर्तानाव</th>
               <th className="text-left p-3">ईमेल</th>
               <th className="text-left p-3">भूमिका</th>
               <th className="text-right p-3 w-28">कृती</th>
@@ -415,7 +432,7 @@ export default function AdminUsers() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                <td colSpan={5} className="p-6 text-center text-muted-foreground">
                   लोड होत आहे…
                 </td>
               </tr>
@@ -424,6 +441,7 @@ export default function AdminUsers() {
               users.map((u: any) => (
                 <tr key={u.id} className="border-b border-border/50">
                   <td className="p-3 font-medium">{u.name}</td>
+                  <td className="p-3 text-muted-foreground font-mono text-xs">{u.username || '—'}</td>
                   <td className="p-3 text-muted-foreground">{u.email}</td>
                   <td className="p-3">
                     {u.role}
@@ -457,6 +475,55 @@ export default function AdminUsers() {
               ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Students Table */}
+      <div className="mt-8">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold">विद्यार्थी</h2>
+          <p className="text-sm text-muted-foreground">सर्व नोंदणी केलेले विद्यार्थी</p>
+        </div>
+        <div className="portal-card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="text-left p-3">नाव</th>
+                <th className="text-left p-3">वापरकर्तानाव</th>
+                <th className="text-left p-3">रोल नं.</th>
+                <th className="text-left p-3">इयत्ता</th>
+                <th className="text-left p-3">पालक</th>
+                <th className="text-left p-3">ईमेल</th>
+              </tr>
+            </thead>
+            <tbody>
+              {studentsLoading && (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                    लोड होत आहे…
+                  </td>
+                </tr>
+              )}
+              {!studentsLoading && students.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                    कोणतेही विद्यार्थी नाहीत
+                  </td>
+                </tr>
+              )}
+              {!studentsLoading &&
+                students.map((s: any) => (
+                  <tr key={s._id} className="border-b border-border/50">
+                    <td className="p-3 font-medium">{s.name}</td>
+                    <td className="p-3 text-muted-foreground font-mono text-xs">{s.username || '—'}</td>
+                    <td className="p-3 text-muted-foreground">{s.roll}</td>
+                    <td className="p-3">{s.className}</td>
+                    <td className="p-3 text-muted-foreground">{s.parentName || s.fatherName || '—'}</td>
+                    <td className="p-3 text-muted-foreground text-xs">{s.studentEmail}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

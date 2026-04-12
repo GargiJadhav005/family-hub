@@ -47,7 +47,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-userSchema.index({ username: 1 }, { unique: true });
 userSchema.index({ email: 1, role: 1 });
 
 const User = mongoose.model('User', userSchema);

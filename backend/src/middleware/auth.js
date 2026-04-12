@@ -1,5 +1,5 @@
 const { verifyToken } = require('../utils/auth');
-const { User } = require('../models');
+const { User, Student } = require('../models');
 
 function getAuthUser(req) {
   if (!req.user) {
@@ -44,24 +44,37 @@ async function authMiddleware(req, res, next) {
       return;
     }
 
-    const user = await User.findById(decoded.sub).lean();
+    // Try User collection first
+    let user = await User.findById(decoded.sub).lean();
 
-    if (!user) {
-      res.status(401).json({ error: 'User no longer exists' });
-      return;
+    if (user) {
+      req.user = {
+        _id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        meta: user.meta,
+      };
+      req.decoded = decoded;
+      return next();
     }
 
-    req.user = {
-      _id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      meta: user.meta,
-    };
+    // Fallback: check Student collection
+    const student = await Student.findById(decoded.sub).lean();
 
-    req.decoded = decoded;
+    if (student) {
+      req.user = {
+        _id: student._id.toString(),
+        name: student.name,
+        email: student.studentEmail,
+        role: 'student',
+        meta: { class: student.className },
+      };
+      req.decoded = decoded;
+      return next();
+    }
 
-    next();
+    res.status(401).json({ error: 'User no longer exists' });
   } catch (error) {
     console.error('Auth Middleware Error:', error);
     res.status(500).json({ error: 'Authentication failed' });

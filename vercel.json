@@ -2,7 +2,9 @@
   "framework": "vite",
   "buildCommand": "npm install && npm run build",
   "outputDirectory": "dist",
-  "nodeVersion": "18.x",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "env": {
     "VITE_API_URL": "@VITE_API_URL",
     "VITE_SCHOOL_DISPLAY_NAME_MR": "@VITE_SCHOOL_DISPLAY_NAME_MR",

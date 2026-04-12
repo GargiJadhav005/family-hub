@@ -20,15 +20,18 @@ function generatePassword() {
 
 async function getDashboard(req, res) {
   try {
-    const [totalUsers, teachers, students, parents, newEnquiries, announcements] =
+    const [teachers, parents, students, newEnquiries, announcements] =
       await Promise.all([
-        User.countDocuments(),
         User.countDocuments({ role: "teacher" }),
-        User.countDocuments({ role: "student" }),
         User.countDocuments({ role: "parent" }),
+        Student.countDocuments(),
         Enquiry.countDocuments({ status: "new" }),
         Announcement.countDocuments({ isActive: true }),
       ]);
+    
+    // Total = teachers + parents + students (students are in their own collection)
+    const totalUsers = teachers + parents + students;
+    
     const usersByMonthData = await User.aggregate([
       {
         $group: {
@@ -51,6 +54,7 @@ async function getDashboard(req, res) {
       userGrowth
     });
   } catch (err) {
+    console.error('Dashboard error:', err);
     res.status(500).json({ error: "Dashboard error" });
   }
 }
@@ -89,121 +93,186 @@ async function getAllUsers(req, res) {
   }
 }
 
-// ===================== CREATE USER =====================
+// ===================== GET STUDENTS =====================
+
+async function getAllStudents(req, res) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.className) filter.className = req.query.className;
+
+    const [students, total] = await Promise.all([
+      Student.find(filter)
+        .populate('studentUserId', 'username email name')
+        .populate('parentUserId', 'username email name')
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Student.countDocuments(filter),
+    ]);
+
+    res.json({
+      total,
+      page,
+      limit,
+      students,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to fetch students",
+      details: process.env.NODE_ENV === 'development' ? err?.message : undefined
+    });
+  }
+}
 
 async function createUser(req, res) {
-  const session = await User.startSession();
-  session.startTransaction();
-
   try {
     const { name, email, role, assignedClass, mobileNumber, studentDetails } = req.body;
 
-    const exists = await User.findOne({ email }).session(session);
-    if (exists) {
-      await session.abortTransaction();
-      return res.status(400).json({ error: "Email already exists" });
-    }
+    // ── STUDENT CREATION ──
+    // Students are stored ONLY in the students collection (not in users)
+    if (role === 'student') {
+      if (!studentDetails || !studentDetails.className || !studentDetails.rollNumber) {
+        return res.status(400).json({ error: 'Student details (className, rollNumber) are required' });
+      }
 
-    // Generate unique username
-    const username = await generateUsername(name);
+      // Check if student email already exists in students collection
+      const existingStudent = await Student.findOne({ studentEmail: email });
+      if (existingStudent) {
+        return res.status(400).json({ error: 'Student email already exists' });
+      }
 
-    const tempPassword = generatePassword();
-    const passwordHash = await hashPassword(tempPassword);
+      // Generate username and password for student login
+      const username = await generateUsername(name);
+      const tempPassword = generatePassword();
+      const passwordHash = await hashPassword(tempPassword);
 
-    const meta = new Map();
-    if (role === "teacher" && assignedClass) {
-      meta.set("class", assignedClass);
-    }
-    if (mobileNumber) {
-      meta.set("mobile", mobileNumber);
-    }
-
-    const [user] = await User.create(
-      [{ name, email, username, passwordHash, role, meta }],
-      { session }
-    );
-
-    // If creating a student, also create the Student document
-    if (role === "student" && studentDetails) {
-      let parentUserId = user._id;
+      // Handle parent: find or create in users collection
+      let parentUserId = req.user._id; // default to admin
       if (studentDetails.parentEmail) {
-        let parentUser = await User.findOne({ email: studentDetails.parentEmail }).session(session);
+        let parentUser = await User.findOne({ email: studentDetails.parentEmail });
         if (!parentUser) {
-          const parentUsername = await generateUsername(studentDetails.fatherName || studentDetails.motherName || name + " (Parent)");
+          // Create parent in users collection
+          const parentUsername = await generateUsername(studentDetails.fatherName || studentDetails.motherName || name + ' Parent');
           const parentPass = generatePassword();
           const parentHash = await hashPassword(parentPass);
-          const [createdParent] = await User.create(
-            [{ name: studentDetails.fatherName || studentDetails.motherName || name + " (Parent)", email: studentDetails.parentEmail, username: parentUsername, passwordHash: parentHash, role: "parent" }],
-            { session }
-          );
-          parentUserId = createdParent._id;
-          sendUserCreatedEmail(studentDetails.parentEmail, (studentDetails.fatherName || name), "parent", parentPass, parentUsername).catch(console.error);
+          parentUser = await User.create({
+            name: studentDetails.fatherName || studentDetails.motherName || name + ' (Parent)',
+            email: studentDetails.parentEmail,
+            username: parentUsername,
+            passwordHash: parentHash,
+            role: 'parent',
+          });
+          parentUserId = parentUser._id;
+          sendUserCreatedEmail(studentDetails.parentEmail, (studentDetails.fatherName || name), 'parent', parentPass, parentUsername).catch(console.error);
         } else {
           parentUserId = parentUser._id;
         }
       }
 
-      await Student.create(
-        [{
-          name,
-          roll: studentDetails.rollNumber,
-          className: studentDetails.className,
-          parentName: studentDetails.fatherName || studentDetails.motherName || "",
-          fatherName: studentDetails.fatherName || "",
-          motherName: studentDetails.motherName || "",
-          studentEmail: email,
-          parentEmail: studentDetails.parentEmail || "",
-          studentUserId: user._id,
-          parentUserId,
-          createdByTeacherId: req.user._id,
-          dateOfBirth: studentDetails.dateOfBirth || "",
-          address: studentDetails.address || "",
-          parentPhone: studentDetails.mobileNumber || "",
-          notes: [
-            studentDetails.idNumber ? `ID: ${studentDetails.idNumber}` : "",
-            studentDetails.regNumber ? `Reg: ${studentDetails.regNumber}` : "",
-            studentDetails.udiseNumber ? `UDISE: ${studentDetails.udiseNumber}` : "",
-            studentDetails.motherTongue ? `Mother Tongue: ${studentDetails.motherTongue}` : "",
-            studentDetails.medium ? `Medium: ${studentDetails.medium}` : "",
-          ].filter(Boolean).join(" | "),
-        }],
-        { session }
-      );
+      // Create Student document (NOT in users collection)
+      const student = await Student.create({
+        name,
+        username,
+        passwordHash,
+        roll: studentDetails.rollNumber,
+        className: studentDetails.className,
+        parentName: studentDetails.fatherName || studentDetails.motherName || '',
+        fatherName: studentDetails.fatherName || '',
+        motherName: studentDetails.motherName || '',
+        studentEmail: email,
+        parentEmail: studentDetails.parentEmail || '',
+        studentUserId: req.user._id, // reference to admin who created
+        parentUserId,
+        createdByTeacherId: req.user._id,
+        dateOfBirth: studentDetails.dateOfBirth || '',
+        address: studentDetails.address || '',
+        parentPhone: studentDetails.mobileNumber || '',
+        notes: [
+          studentDetails.idNumber ? `ID: ${studentDetails.idNumber}` : '',
+          studentDetails.regNumber ? `Reg: ${studentDetails.regNumber}` : '',
+          studentDetails.udiseNumber ? `UDISE: ${studentDetails.udiseNumber}` : '',
+          studentDetails.motherTongue ? `Mother Tongue: ${studentDetails.motherTongue}` : '',
+          studentDetails.medium ? `Medium: ${studentDetails.medium}` : '',
+        ].filter(Boolean).join(' | '),
+      });
+
+      Notification.create({
+        userId: req.user._id,
+        event: 'student_created',
+        title: 'Student Created',
+        message: `Student ${name} has been enrolled in ${studentDetails.className}`,
+      }).catch(err => console.error('Notification error (non-blocking):', err.message));
+
+      sendUserCreatedEmail(email, name, 'student', tempPassword, username).catch(console.error);
+
+      const response = {
+        message: 'Student created successfully',
+        user: {
+          id: student._id.toString(),
+          name: student.name,
+          username: student.username,
+          email: student.studentEmail,
+          role: 'student',
+          className: student.className,
+        },
+      };
+
+      if (process.env.NODE_ENV === 'development') {
+        response.temporaryPassword = tempPassword;
+        response.username = username;
+      }
+
+      return res.status(201).json(response);
     }
 
-    await Notification.create(
-      [
-        {
-          userId: user._id,
-          event: "account_created",
-          title: "Account Created",
-          message: `Your ${role} account has been created`,
-        },
-      ],
-      { session }
-    );
+    // ── TEACHER / PARENT / ADMIN CREATION ──
+    // These are stored in the users collection
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
 
-    await session.commitTransaction();
+    const username = await generateUsername(name);
+    const tempPassword = generatePassword();
+    const passwordHash = await hashPassword(tempPassword);
+
+    const meta = new Map();
+    if (role === 'teacher' && assignedClass) {
+      meta.set('class', assignedClass);
+    }
+    if (mobileNumber) {
+      meta.set('mobile', mobileNumber);
+    }
+
+    const user = await User.create({ name, email, username, passwordHash, role, meta });
+
+    Notification.create({
+      userId: user._id,
+      event: 'account_created',
+      title: 'Account Created',
+      message: `Your ${role} account has been created`,
+    }).catch(err => console.error('Notification error (non-blocking):', err.message));
 
     sendUserCreatedEmail(email, name, role, tempPassword, username).catch(console.error);
 
     const response = {
-      message: "User created successfully",
+      message: 'User created successfully',
       user: toClientUser(user),
     };
 
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === 'development') {
       response.temporaryPassword = tempPassword;
       response.username = username;
     }
 
     res.status(201).json(response);
   } catch (err) {
-    await session.abortTransaction();
     console.error('Create user error:', err);
-    res.status(500).json({ error: "User creation failed", details: process.env.NODE_ENV === "development" ? err.message : undefined });
-  } finally {
-    session.endSession();
+    res.status(500).json({ error: 'User creation failed', details: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 }
 
@@ -468,6 +537,7 @@ async function deleteEnquiry(req, res) {
 module.exports = {
   getDashboard,
   getAllUsers,
+  getAllStudents,
   createUser,
   updateUser,
   deleteUser,

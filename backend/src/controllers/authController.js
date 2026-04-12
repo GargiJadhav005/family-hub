@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, Student } = require('../models');
 const { comparePasswords, signToken, toClientUser, hashPassword, getMetaValue } = require('../utils/auth');
 
 async function login(req, res) {
@@ -9,37 +9,76 @@ async function login(req, res) {
     }
 
     const { username, password, role } = req.body;
+
+    // First check Users collection (teacher, parent, admin)
     const user = await User.findOne({ username }).select('+passwordHash');
 
-    if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
+    if (user) {
+      if (role && user.role !== role) {
+        res.status(401).json({ error: 'Invalid credentials' });
+        return;
+      }
+
+      if (user.isActive === false) {
+        res.status(403).json({ error: 'Account is deactivated' });
+        return;
+      }
+
+      const isValidPassword = await comparePasswords(password, user.passwordHash);
+      if (!isValidPassword) {
+        res.status(401).json({ error: 'Invalid credentials' });
+        return;
+      }
+
+      const token = signToken(user._id.toString(), user.role);
+      const clientUser = toClientUser(user);
+
+      res.json({ user: clientUser, token });
       return;
     }
 
-    if (role && user.role !== role) {
-      res.status(401).json({ error: 'Invalid credentials' });
+    // Not found in Users — check Students collection
+    const student = await Student.findOne({ username });
+
+    if (student) {
+      if (role && role !== 'student') {
+        res.status(401).json({ error: 'Invalid credentials' });
+        return;
+      }
+
+      if (student.isActive === false) {
+        res.status(403).json({ error: 'Account is deactivated' });
+        return;
+      }
+
+      if (!student.passwordHash) {
+        res.status(401).json({ error: 'Invalid credentials' });
+        return;
+      }
+
+      const isValidPassword = await comparePasswords(password, student.passwordHash);
+      if (!isValidPassword) {
+        res.status(401).json({ error: 'Invalid credentials' });
+        return;
+      }
+
+      const token = signToken(student._id.toString(), 'student');
+      const clientUser = {
+        id: student._id.toString(),
+        name: student.name,
+        username: student.username,
+        email: student.studentEmail,
+        role: 'student',
+        avatar: null,
+        meta: { class: student.className },
+      };
+
+      res.json({ user: clientUser, token });
       return;
     }
 
-    if (user.isActive === false) {
-      res.status(403).json({ error: 'Account is deactivated' });
-      return;
-    }
-
-    const isValidPassword = await comparePasswords(password, user.passwordHash);
-
-    if (!isValidPassword) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
-    const token = signToken(user._id.toString(), user.role);
-    const clientUser = toClientUser(user);
-
-    res.json({
-      user: clientUser,
-      token,
-    });
+    // Not found in either collection
+    res.status(401).json({ error: 'Invalid credentials' });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({
@@ -56,21 +95,41 @@ async function getMe(req, res) {
       return;
     }
 
+    // Check User collection first
     const user = await User.findById(req.user._id);
 
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
+    if (user) {
+      if (user.isActive === false) {
+        res.status(403).json({ error: 'Account is deactivated' });
+        return;
+      }
+      res.json({ user: toClientUser(user) });
       return;
     }
 
-    if (user.isActive === false) {
-      res.status(403).json({ error: 'Account is deactivated' });
+    // Fallback: check Student collection
+    const student = await Student.findById(req.user._id);
+
+    if (student) {
+      if (student.isActive === false) {
+        res.status(403).json({ error: 'Account is deactivated' });
+        return;
+      }
+      res.json({
+        user: {
+          id: student._id.toString(),
+          name: student.name,
+          username: student.username,
+          email: student.studentEmail,
+          role: 'student',
+          avatar: null,
+          meta: { class: student.className },
+        },
+      });
       return;
     }
 
-    const clientUser = toClientUser(user);
-
-    res.json({ user: clientUser });
+    res.status(404).json({ error: 'User not found' });
   } catch (err) {
     console.error('GetMe error:', err);
     res.status(500).json({
@@ -87,25 +146,41 @@ async function refreshToken(req, res) {
       return;
     }
 
+    // Check User collection first
     const user = await User.findById(req.user._id);
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
+    if (user) {
+      if (user.isActive === false) {
+        res.status(403).json({ error: 'Account is deactivated' });
+        return;
+      }
+      const token = signToken(user._id.toString(), user.role);
+      const clientUser = toClientUser(user);
+      res.json({ user: clientUser, token, message: 'Token refreshed successfully' });
       return;
     }
 
-    if (user.isActive === false) {
-      res.status(403).json({ error: 'Account is deactivated' });
+    // Fallback: check Student collection
+    const student = await Student.findById(req.user._id);
+    if (student) {
+      if (student.isActive === false) {
+        res.status(403).json({ error: 'Account is deactivated' });
+        return;
+      }
+      const token = signToken(student._id.toString(), 'student');
+      const clientUser = {
+        id: student._id.toString(),
+        name: student.name,
+        username: student.username,
+        email: student.studentEmail,
+        role: 'student',
+        avatar: null,
+        meta: { class: student.className },
+      };
+      res.json({ user: clientUser, token, message: 'Token refreshed successfully' });
       return;
     }
 
-    const token = signToken(user._id.toString(), user.role);
-    const clientUser = toClientUser(user);
-
-    res.json({
-      user: clientUser,
-      token,
-      message: 'Token refreshed successfully',
-    });
+    res.status(404).json({ error: 'User not found' });
   } catch (err) {
     console.error('RefreshToken error:', err);
     res.status(500).json({
@@ -114,6 +189,7 @@ async function refreshToken(req, res) {
     });
   }
 }
+
 
 async function resetPassword(req, res) {
   try {

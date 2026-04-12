@@ -9,6 +9,9 @@ export default function AdminDashboard() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: () => apiCall('/admin/dashboard'),
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
   const statCards = [

@@ -1,23 +1,34 @@
 services:
   - type: web
     name: family-hub-backend
-    env: node
+    runtime: node
     region: oregon
     plan: free
-    
-    # Build configuration
-    buildCommand: "cd backend && npm install && npm run build"
-    startCommand: "cd backend && npm start"
-    
-    # Environment variables (sensitive values set in Render Dashboard)
+    rootDir: backend
+
+    # Build & start
+    buildCommand: npm install
+    startCommand: node src/server.js
+
+    # Environment variables (set sensitive values in Render Dashboard)
     envVars:
       - key: NODE_ENV
         value: production
-    
+      - key: PORT
+        value: "10000"
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: family_hub
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        sync: false
+
     # Health check
     healthCheckPath: /api/health
-    
+
     # Auto-deploy from GitHub
-    repo: https://github.com/your-username/family-hub
-    branch: main
     autoDeploy: true
