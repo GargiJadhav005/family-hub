@@ -1,6 +1,5 @@
 {
   "framework": "vite",
-  "rootDirectory": "frontend",
   "buildCommand": "npm install && npm run build",
   "outputDirectory": "dist",
   "nodeVersion": "18.x",
