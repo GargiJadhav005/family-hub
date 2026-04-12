@@ -9,6 +9,7 @@ export type UserRole = 'teacher' | 'parent' | 'student' | 'admin';
 interface User {
   id: string;
   name: string;
+  username: string;
   role: UserRole;
   email: string;
   avatar?: string;
@@ -67,7 +68,7 @@ export type EnrollPayload = {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, role: UserRole) => Promise<boolean>;
+  login: (username: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
   enrolledStudents: EnrolledStudent[];
   enrollStudent: (payload: EnrollPayload) => Promise<EnrolledStudent>;
@@ -76,14 +77,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const DEMO_CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
-  // Generic demo accounts
-  'teacher@vainateya.edu':  { password: 'teacher123',  role: 'teacher' },
-  'parent@vainateya.edu':   { password: 'parent123',   role: 'parent'  },
-  'student@vainateya.edu':  { password: 'student123',  role: 'student' },
-  'admin@vainateya.edu':    { password: 'admin123',    role: 'admin'   },
-  // Real database accounts (fallback when backend is offline)
-  'vv.chiplunkar@vainateya.edu': { password: 'Teacher@2025', role: 'teacher' },
-  'admin@vainateya.school':      { password: 'Admin@2025',   role: 'admin'   },
+  // Demo accounts for local testing
+  'admin':       { password: 'Admin@123',    role: 'admin'   },
+  'teacher.john': { password: 'Teacher@123',  role: 'teacher' },
+  'student.jane': { password: 'Student@123',  role: 'student' },
+  'parent.mak':   { password: 'Parent@123',   role: 'parent'  },
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -107,12 +105,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }));
   });
 
-  const login = useCallback(async (email: string, password: string, role: UserRole): Promise<boolean> => {
+  const login = useCallback(async (username: string, password: string, role: UserRole): Promise<boolean> => {
     // Try backend first
     try {
       const data = await apiCall('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ username, password, role }),
       });
       if (data?.user && data?.token) {
         setUser(data.user);
@@ -125,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (import.meta.env.DEV && !import.meta.env.VITE_API_URL) {
-      const demo = DEMO_CREDENTIALS[email];
+      const demo = DEMO_CREDENTIALS[username];
       if (demo && demo.password === password && demo.role === role) {
         const mockUser = MOCK_USERS[role];
         setUser(mockUser);

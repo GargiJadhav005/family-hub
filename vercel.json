@@ -1,34 +1,18 @@
 {
+  "framework": "vite",
   "buildCommand": "npm install && npm run build",
   "outputDirectory": "dist",
-  "env": {
-    "NODE_ENV": "production",
-    "VITE_API_URL": "https://vainateya.vercel.app/api"
-  },
-  "framework": "vite",
   "nodeVersion": "18.x",
-  "functions": {
-    "api/index.ts": {
-      "memory": 1024,
-      "maxDuration": 30,
-      "runtime": "nodejs18.x"
-    }
+  "env": {
+    "VITE_API_URL": "@VITE_API_URL",
+    "VITE_SCHOOL_DISPLAY_NAME_MR": "@VITE_SCHOOL_DISPLAY_NAME_MR",
+    "VITE_SCHOOL_HERO_TITLE_BASE_MR": "@VITE_SCHOOL_HERO_TITLE_BASE_MR",
+    "VITE_SCHOOL_HERO_TITLE_ACCENT_MR": "@VITE_SCHOOL_HERO_TITLE_ACCENT_MR",
+    "VITE_SCHOOL_SHORT_NAME_MR": "@VITE_SCHOOL_SHORT_NAME_MR"
   },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api"
+  "git": {
+    "deploymentEnabled": {
+      "main": true
     }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
-    }
-  ]
+  }
 }

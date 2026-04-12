@@ -22,7 +22,7 @@ export default function Login() {
   const defaultRole = (searchParams.get("role") as UserRole) || "teacher";
 
   const [role, setRole]         = useState<UserRole>(defaultRole);
-  const [email, setEmail]       = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
   const [showPw, setShowPw]     = useState(false);
@@ -34,7 +34,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const success = await login(email, password, role);
+    const success = await login(username, password, role);
     setLoading(false);
     if (success) {
       toast.success("यशस्वीरित्या लॉगिन झाले!");
@@ -43,7 +43,7 @@ export default function Login() {
       };
       navigate(map[role]);
     } else {
-      toast.error("चुकीचा ईमेल किंवा पासवर्ड");
+      toast.error("चुकीचा वापरकर्तानाव किंवा पासवर्ड");
     }
   };
 
@@ -126,13 +126,13 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">
-                ईमेल पत्ता
+                वापरकर्तानाव
               </label>
               <Input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="your@email.com"
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="e.g., admin या teacher.john"
                 required
                 className="h-11 rounded-xl bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-100 transition-all duration-200"
               />
