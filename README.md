@@ -56,27 +56,33 @@ A comprehensive full-stack school management platform built with **React + TypeS
 git clone <your-repo-url>
 cd family-hub
 
-# Install dependencies
+# Install frontend dependencies
+cd frontend
+npm install  # or: bun install
+cd ..
+
+# Install backend dependencies
+cd backend
 npm install
-cd backend && npm install && cd ..
+cd ..
 
 # Configure environment variables
 cp backend/.env.example backend/.env
-cp .env.example .env.local
-# Edit .env and .env.local with your configuration
+# Edit backend/.env with your MongoDB URI and JWT secret
 
 # Create admin account
 cd backend
 npm run seed:admin
 # You'll get: admin@google.com / Admin@123
 # Change password on first login!
+cd ..
 
 # Start development servers
 # Terminal 1: Backend
-cd backend && npm run dev
+cd backend && npm start
 
 # Terminal 2: Frontend
-npm run dev
+cd frontend && npm run dev
 
 # Access at http://localhost:5173
 ```
@@ -85,11 +91,10 @@ npm run dev
 
 ## 📚 Documentation
 
-- **[SETUP_COMPLETE.md](./SETUP_COMPLETE.md)** - Complete setup and development guide
-- **[DEPLOYMENT_CREDENTIALS.md](./DEPLOYMENT_CREDENTIALS.md)** - Production deployment guide
+- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Complete deployment guide (Vercel + Render)
 - **[API.md](./API.md)** - API endpoint documentation
-- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Common issues and solutions
-- **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** - System quick reference
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture and design
+- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Initial setup and configuration
 
 ---
 
@@ -164,25 +169,43 @@ See [API.md](./API.md) for detailed documentation.
 
 ```
 family-hub/
-├── public/                 # Static assets
-├── src/                   # Frontend code
-│   ├── pages/            # React page components
-│   ├── components/       # Reusable UI components
-│   ├── contexts/         # React context (auth, etc)
-│   ├── lib/              # API utilities
-│   └── hooks/            # Custom hooks
-├── backend/              # Backend code
+├── frontend/                    # React + Vite frontend application
 │   ├── src/
-│   │   ├── controllers/  # Business logic
-│   │   ├── routes/       # API endpoints
-│   │   ├── models/       # MongoDB schemas
-│   │   ├── middleware/   # Express middleware
-│   │   └── utils/        # Helper functions
-│   └── package.json
-├── SETUP_COMPLETE.md     # Full setup guide
-├── DEPLOYMENT_CREDENTIALS.md  # Deployment guide
-└── README.md            # This file
+│   │   ├── pages/              # React page components
+│   │   ├── components/         # Reusable UI components
+│   │   ├── contexts/           # React context (auth, etc)
+│   │   ├── lib/                # API utilities & helpers
+│   │   └── hooks/              # Custom React hooks
+│   ├── public/                 # Static assets
+│   ├── index.html              # HTML entry point
+│   ├── vite.config.ts          # Vite build configuration
+│   ├── tailwind.config.ts      # Tailwind CSS theme
+│   ├── tsconfig.json           # TypeScript configuration
+│   └── package.json            # Frontend dependencies
+├── backend/                     # Node.js + Express API server
+│   ├── src/
+│   │   ├── controllers/        # Business logic & request handlers
+│   │   ├── routes/             # API endpoint definitions
+│   │   ├── models/             # MongoDB schemas
+│   │   ├── middleware/         # Express middleware (auth, validation)
+│   │   ├── utils/              # Helper functions
+│   │   └── server.js           # Express server entry point
+│   ├── .env.example            # Environment variables template
+│   ├── package.json            # Backend dependencies
+│   └── Procfile                # Deployment process file
+├── vercel.json                 # Frontend deployment config (Vercel)
+├── render.yaml                 # Backend deployment config (Render)
+├── DEPLOYMENT_GUIDE.md         # Complete deployment instructions
+└── README.md                   # This file
 ```
+
+### Folder Organization
+
+- **`frontend/`** — Entire React application with all configs and assets. Deploys to Vercel.
+- **`backend/`** — Complete Express API server. Deploys to Render.
+- **Root level** — Deployment configs and documentation only.
+
+For detailed deployment instructions, see **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)**.
 
 ---
 

@@ -1,0 +1,93 @@
+const nodemailer = require('nodemailer');
+
+// Initialize transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_SECURE === 'true' || false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD,
+  },
+});
+
+async function sendEnquiryEmail(data, schoolEmail) {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: schoolEmail,
+      subject: 'New School Enquiry',
+      html: `
+        <h2>New Enquiry from ${data.name}</h2>
+        <p><strong>Name:</strong> ${data.name}</p>
+        <p><strong>Email:</strong> ${data.email}</p>
+        <p><strong>Phone:</strong> ${data.phone}</p>
+        <p><strong>Message:</strong></p>
+        <p>${data.message}</p>
+      `,
+      replyTo: data.email,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✓ Enquiry email sent to', schoolEmail);
+  } catch (err) {
+    console.error('✗ Failed to send enquiry email:', err);
+    throw new Error('Failed to send enquiry email');
+  }
+}
+
+async function sendUserCreatedEmail(userEmail, userName, userRole, temporaryPassword, username) {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: userEmail,
+      subject: `Welcome to Family Hub - ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`,
+      html: `
+        <h2>Welcome to Family Hub!</h2>
+        <p>Dear ${userName},</p>
+        <p>Your account has been created as a ${userRole}.</p>
+        <p><strong>Login Credentials:</strong></p>
+        <ul>
+          <li><strong>Username:</strong> ${username}</li>
+          <li><strong>Temporary Password:</strong> ${temporaryPassword}</li>
+        </ul>
+        <p>Please log in and change your password immediately.</p>
+        <p>If you have any questions, please contact the administration.</p>
+        <p>Best regards,<br>Family Hub Team</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✓ Welcome email sent to', userEmail);
+  } catch (err) {
+    console.error('✗ Failed to send welcome email:', err);
+    throw new Error('Failed to send welcome email');
+  }
+}
+
+async function sendAnnouncementEmail(recipientEmail, title, content, announcedBy) {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: recipientEmail,
+      subject: `School Announcement: ${title}`,
+      html: `
+        <h2>${title}</h2>
+        <p>${content}</p>
+        <p><em>Announced by: ${announcedBy}</em></p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✓ Announcement email sent to', recipientEmail);
+  } catch (err) {
+    console.error('✗ Failed to send announcement email:', err);
+    throw new Error('Failed to send announcement email');
+  }
+}
+
+module.exports = {
+  sendEnquiryEmail,
+  sendUserCreatedEmail,
+  sendAnnouncementEmail,
+};
